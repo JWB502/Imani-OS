@@ -7,9 +7,27 @@ const SETTINGS_KEY = "imani-os:settings:v1";
 const defaultSettings: AppSettings = {
   agencyName: "Imani Advantage",
   openAiModel: "gpt-4o-mini",
+  redactionStyle: "iaid",
   analysts: ["Imani Analyst"],
   pdfPageNumbers: true,
 };
+
+function coerceSettings(raw: Partial<AppSettings> | undefined): AppSettings {
+  const base = raw ?? {};
+  const redactionStyle: AppSettings["redactionStyle"] =
+    base.redactionStyle === "initial" ? "initial" : "iaid";
+
+  return {
+    ...defaultSettings,
+    ...base,
+    redactionStyle,
+    analysts: Array.isArray(base.analysts) ? base.analysts : defaultSettings.analysts,
+    pdfPageNumbers:
+      typeof base.pdfPageNumbers === "boolean"
+        ? base.pdfPageNumbers
+        : defaultSettings.pdfPageNumbers,
+  };
+}
 
 type SettingsContextValue = {
   settings: AppSettings;
@@ -20,12 +38,13 @@ const SettingsContext = React.createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = React.useState<AppSettings>(() => {
-    return readJson<AppSettings>(SETTINGS_KEY) ?? defaultSettings;
+    const stored = readJson<Partial<AppSettings>>(SETTINGS_KEY);
+    return coerceSettings(stored);
   });
 
   const updateSettings = React.useCallback((patch: Partial<AppSettings>) => {
     setSettings((prev) => {
-      const next = { ...prev, ...patch };
+      const next = coerceSettings({ ...prev, ...patch });
       writeJson(SETTINGS_KEY, next);
       return next;
     });

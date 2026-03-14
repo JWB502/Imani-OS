@@ -14,6 +14,7 @@ export type ClientStatus = "Lead" | "Active" | "Paused" | "Former";
 export type Client = {
   id: ID;
   name: string;
+  privacyId?: string;
   organizationType?: string;
   contactName?: string;
   contactEmail?: string;
@@ -204,6 +205,7 @@ export type AppSettings = {
   agencyName: string;
   openAiApiKey?: string;
   openAiModel: string;
+  redactionStyle: "initial" | "iaid";
   analysts: string[];
   pdfPageNumbers: boolean;
 };

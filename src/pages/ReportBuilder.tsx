@@ -49,6 +49,7 @@ import { exportElementToPdf } from "@/lib/pdf";
 import { clamp } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { createId } from "@/lib/id";
+import { sanitizeForAI } from "@/lib/privacy";
 import type {
   ChecklistItem,
   KPIItem,
@@ -470,11 +471,13 @@ export default function ReportBuilder() {
             ? `Based on this report content, draft practical recommendations for the next 30–90 days. Client: ${client.name}.\n\nContent:\n${stitched}\n\nOutput: priority-ordered bullets with brief rationale.`
             : `Rewrite the following notes into professional client-facing report language. Keep meaning, improve clarity, tighten sentences.\n\nRaw notes:\n${aiInput}`;
 
+      const sanitizedPrompt = sanitizeForAI({ report, client, settings, prompt });
+
       const out = await runOpenAiChat({
         apiKey: settings.openAiApiKey,
         model: settings.openAiModel,
         system,
-        user: prompt,
+        user: sanitizedPrompt,
       });
 
       setAiOutput(out);
@@ -812,6 +815,7 @@ export default function ReportBuilder() {
 
               <div className="mt-4 rounded-2xl bg-[color:var(--im-navy)] p-3 text-xs text-white/85 ring-1 ring-white/10">
                 Tip: AI supports the analyst — you're still the final editor.
+                <div className="mt-1 text-white/80">PII redaction is applied before sending to AI.</div>
               </div>
             </div>
 

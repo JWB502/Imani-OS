@@ -1,16 +1,30 @@
 import * as React from "react";
-import { RefreshCw, Shield, Sparkles } from "lucide-react";
+import { Download, RefreshCw, Shield, Sparkles, Upload } from "lucide-react";
 
 import { SoftButton } from "@/components/app/SoftButton";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { cn } from "@/lib/utils";
+import { exportBackup, importBackup, validateBackupPayload } from "@/lib/backup";
+import { openFile, saveFile } from "@/lib/native";
 
 function csv(v: string) {
   return v
@@ -25,6 +39,10 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings();
 
   const [analysts, setAnalysts] = React.useState(settings.analysts.join(", "));
+  const [importCandidate, setImportCandidate] = React.useState<
+    | { raw: unknown; summary: { clients: number; reports: number; exportedAt: string } }
+    | null
+  >(null);
 
   React.useEffect(() => {
     setAnalysts(settings.analysts.join(", "));
@@ -118,6 +136,127 @@ export default function Settings() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Shield className="h-4 w-4 text-[color:var(--im-secondary)]" /> Privacy &amp; Security
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="text-sm font-medium">AI redaction style</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                PII redaction applies to AI requests only. UI data is shown normally.
+              </div>
+            </div>
+
+            <RadioGroup
+              value={settings.redactionStyle}
+              onValueChange={(v) => updateSettings({ redactionStyle: v as any })}
+              className="grid gap-3"
+            >
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 ring-1 ring-border/60",
+                  settings.redactionStyle === "iaid" && "ring-2 ring-primary/30",
+                )}
+              >
+                <RadioGroupItem value="iaid" className="mt-1" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">IA ID per client (IA#######)</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Default. Consistent anonymization across all AI prompts.
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 ring-1 ring-border/60",
+                  settings.redactionStyle === "initial" && "ring-2 ring-primary/30",
+                )}
+              >
+                <RadioGroupItem value="initial" className="mt-1" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">First-initial for people</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Example: John Doe → J.D. (best-effort on known name fields).
+                  </div>
+
+                </div>
+              </label>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Backups</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Import replaces local data on this device. API keys are not included in backups.
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SoftButton
+                className="h-11 justify-center rounded-2xl bg-white"
+                onClick={async () => {
+                  try {
+                    const { filename, content } = exportBackup();
+                    await saveFile({ content, defaultPath: filename });
+                    toast({ title: "Backup exported." });
+                  } catch (e: any) {
+                    toast({
+                      title: "Export failed",
+                      description: String(e?.message ?? e),
+                    });
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" /> Export JSON
+              </SoftButton>
+
+              <SoftButton
+                className="h-11 justify-center rounded-2xl bg-white"
+                onClick={async () => {
+                  const text = await openFile();
+                  if (!text) return;
+
+                  try {
+                    const raw = JSON.parse(text);
+                    const parsed = validateBackupPayload(raw);
+                    setImportCandidate({
+                      raw,
+                      summary: {
+                        clients: parsed.data.clients.length,
+                        reports: parsed.data.reports.length,
+                        exportedAt: parsed.exportedAt,
+                      },
+                    });
+                  } catch (e: any) {
+                    toast({
+                      title: "Invalid backup file",
+                      description: String(e?.message ?? e),
+                    });
+                  }
+                }}
+              >
+                <Upload className="mr-2 h-4 w-4" /> Import JSON
+              </SoftButton>
+            </div>
+
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
+              <div className="text-sm font-medium">What's included</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                Clients, reports, templates, ROI, wins, campaigns, and app settings.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">PDF export</CardTitle>
@@ -174,6 +313,57 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={Boolean(importCandidate)}
+        onOpenChange={(open) => {
+          if (!open) setImportCandidate(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Import backup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace local data and settings on this device. Your current OpenAI API key will be kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {importCandidate ? (
+            <div className="rounded-2xl bg-white/70 p-4 text-sm ring-1 ring-border/60">
+              <div className="font-medium">Backup summary</div>
+              <div className="mt-1 text-muted-foreground">
+                {importCandidate.summary.clients} clients • {importCandidate.summary.reports} reports
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Exported: {new Date(importCandidate.summary.exportedAt).toLocaleString()}
+              </div>
+            </div>
+          ) : null}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-2xl"
+              onClick={async () => {
+                if (!importCandidate) return;
+                try {
+                  await importBackup(importCandidate.raw);
+                  toast({ title: "Backup imported. Reloading…" });
+                  setImportCandidate(null);
+                  setTimeout(() => window.location.reload(), 450);
+                } catch (e: any) {
+                  toast({
+                    title: "Import failed",
+                    description: String(e?.message ?? e),
+                  });
+                }
+              }}
+            >
+              Import
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

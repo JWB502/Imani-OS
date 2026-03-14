@@ -129,6 +129,9 @@ export default function ClientDetail() {
             {[client.city, client.state].filter(Boolean).join(", ") || "No location"}
             {client.organizationType ? ` • ${client.organizationType}` : ""}
           </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Privacy ID: <span className="font-medium text-foreground/70">{client.privacyId ?? "—"}</span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild className="rounded-2xl">

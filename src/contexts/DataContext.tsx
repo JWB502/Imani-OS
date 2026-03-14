@@ -13,6 +13,7 @@ import type {
 } from "@/types/imani";
 import { createSeedData } from "@/data/seed";
 import { createId } from "@/lib/id";
+import { createPrivacyId } from "@/lib/privacy";
 import { readJson, writeJson } from "@/lib/storage";
 
 const DATA_KEY = "imani-os:data:v1";
@@ -144,6 +145,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setData(next);
     writeJson(DATA_KEY, next);
   }, []);
+
+  React.useEffect(() => {
+    let nextClients = data.clients.slice();
+    let changed = false;
+
+    for (let i = 0; i < nextClients.length; i++) {
+      const c = nextClients[i]!;
+      if (c.privacyId) continue;
+      const privacyId = createPrivacyId({ ...data, clients: nextClients });
+      nextClients[i] = { ...c, privacyId };
+      changed = true;
+    }
+
+    if (changed) {
+      persist({ ...data, clients: nextClients });
+    }
+  }, [data, persist]);
 
   const resetToSeed = React.useCallback(() => {
     const seed = createSeedData();
@@ -280,6 +298,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         id: createId("cl"),
         createdAt,
         updatedAt: createdAt,
+        privacyId: createPrivacyId(data),
         includeInAgencyImpact: patch.includeInAgencyImpact ?? true,
         ...patch,
       };
