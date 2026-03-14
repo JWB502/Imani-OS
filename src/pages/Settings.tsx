@@ -1,7 +1,9 @@
 import * as React from "react";
 import { Download, RefreshCw, Shield, Sparkles, Upload } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 
 import { SoftButton } from "@/components/app/SoftButton";
+import { UpdateDialog } from "@/components/app/UpdateDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,8 @@ import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { exportBackup, importBackup, validateBackupPayload } from "@/lib/backup";
-import { openFile, saveFile } from "@/lib/native";
+import { isTauri, openFile, saveFile } from "@/lib/native";
+import { checkForUpdates, getCurrentAppVersion, installAndRelaunch } from "@/lib/updater";
 
 function csv(v: string) {
   return v
@@ -44,9 +47,22 @@ export default function Settings() {
     | null
   >(null);
 
+  const [appVersion, setAppVersion] = React.useState<string | undefined>(undefined);
+  const [updatePayload, setUpdatePayload] = React.useState<
+    | { version: string; notes?: string; update: unknown }
+    | null
+  >(null);
+  const [updateOpen, setUpdateOpen] = React.useState(false);
+  const [installingUpdate, setInstallingUpdate] = React.useState(false);
+
   React.useEffect(() => {
     setAnalysts(settings.analysts.join(", "));
   }, [settings.analysts]);
+
+  React.useEffect(() => {
+    if (!isTauri()) return;
+    getCurrentAppVersion().then(setAppVersion);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -136,7 +152,7 @@ export default function Settings() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -255,6 +271,59 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Updates</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
+              <div className="text-sm font-medium">Current version</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                {isTauri() ? (appVersion ? `v${appVersion}` : "Loading…") : "Web app"}
+              </div>
+            </div>
+
+            <SoftButton
+              className="h-11 w-full justify-center rounded-2xl bg-white"
+              onClick={async () => {
+                if (!isTauri()) {
+                  sonnerToast.message("Updates are handled via your browser.");
+                  return;
+                }
+
+                const id = sonnerToast.loading("Checking for updates…");
+                try {
+                  const result = await checkForUpdates();
+                  sonnerToast.dismiss(id);
+
+                  if (!result.available) {
+                    sonnerToast.success("You're up to date.");
+                    return;
+                  }
+
+                  setUpdatePayload({
+                    version: result.version || "New version",
+                    notes: result.notes,
+                    update: result.update,
+                  });
+                  setUpdateOpen(true);
+                } catch (e: any) {
+                  sonnerToast.dismiss(id);
+                  sonnerToast.error("Update check failed", {
+                    description: String(e?.message ?? e),
+                  });
+                }
+              }}
+            >
+              Check for updates
+            </SoftButton>
+
+            <div className="text-xs text-muted-foreground">
+              Desktop builds can download and install updates automatically.
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
@@ -364,6 +433,30 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {updatePayload ? (
+        <UpdateDialog
+          open={updateOpen}
+          onOpenChange={setUpdateOpen}
+          version={updatePayload.version}
+          notes={updatePayload.notes}
+          installing={installingUpdate}
+          onInstall={async () => {
+            if (installingUpdate) return;
+            setInstallingUpdate(true);
+            const id = sonnerToast.loading("Downloading update…");
+            try {
+              await installAndRelaunch(updatePayload.update);
+            } catch (e: any) {
+              sonnerToast.dismiss(id);
+              sonnerToast.error("Update install failed", {
+                description: String(e?.message ?? e),
+              });
+              setInstallingUpdate(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

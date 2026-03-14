@@ -4,6 +4,7 @@ import { Bell, Search } from "lucide-react";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/AppSidebar";
+import { UpdateChecker } from "@/components/app/UpdateChecker";
 import { Input } from "@/components/ui/input";
 import { SoftIconButton } from "@/components/app/SoftButton";
 import { isTauri } from "@/lib/native";
@@ -14,6 +15,7 @@ export function AppLayout() {
 
   return (
     <SidebarProvider defaultOpen>
+      <UpdateChecker />
       <AppSidebar />
       <div className="flex min-h-svh flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
