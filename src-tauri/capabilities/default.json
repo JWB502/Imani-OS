@@ -1,0 +1,18 @@
+{
+  "identifier": "default",
+  "description": "Default permissions for Imani OS (fs + dialog for backups)",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "fs:default",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$HOME/**" }, { "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$HOME/**" }, { "path": "$APPDATA/**" }]
+    }
+  ]
+}

@@ -41,11 +41,12 @@ export async function openFile(): Promise<string | undefined> {
     if (!selected) return undefined;
     const path = Array.isArray(selected) ? selected[0] : selected;
 
-    const out = await readTextFile(path);
+    const out: any = await readTextFile(path);
     if (out instanceof ArrayBuffer) {
       return new TextDecoder("utf-8").decode(out);
     }
-    return out as string;
+    return String(out);
+
   }
 
   return await new Promise((resolve) => {

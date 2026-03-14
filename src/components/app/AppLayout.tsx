@@ -1,15 +1,16 @@
 import * as React from "react";
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { Bell, Search } from "lucide-react";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/AppSidebar";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { SoftIconButton } from "@/components/app/SoftButton";
+import { isTauri } from "@/lib/native";
 
 export function AppLayout() {
   const [query, setQuery] = React.useState("");
+  const desktop = isTauri();
 
   return (
     <SidebarProvider defaultOpen>
@@ -27,6 +28,16 @@ export function AppLayout() {
                 className="h-10 rounded-2xl border-border/70 bg-white/70 pl-9 shadow-sm focus-visible:ring-primary/30"
               />
             </div>
+
+            {desktop ? (
+              <Link
+                to="/settings#backups"
+                className="hidden h-10 items-center rounded-full bg-[color:var(--im-secondary)] px-3 text-xs font-semibold text-white shadow-sm ring-1 ring-white/10 transition hover:bg-[color:var(--im-secondary)]/90 sm:inline-flex"
+              >
+                Desktop mode
+              </Link>
+            ) : null}
+
             <SoftIconButton
               size="icon"
               className="h-10 w-10 rounded-2xl"

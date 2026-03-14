@@ -1,0 +1,23 @@
+[package]
+name = "imani-os"
+version = "0.1.0"
+description = "Imani OS desktop"
+authors = ["Imani Advantage"]
+edition = "2021"
+
+[lib]
+name = "imani_os"
+crate-type = ["cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

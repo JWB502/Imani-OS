@@ -194,7 +194,7 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="text-base">Backups</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4" id="backups">
             <div className="text-sm text-muted-foreground">
               Import replaces local data on this device. API keys are not included in backups.
             </div>
