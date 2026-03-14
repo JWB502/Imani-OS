@@ -251,13 +251,12 @@ export default function Clients() {
                     {[c.city, c.state].filter(Boolean).join(", ") || "—"}
                   </div>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <div className="flex flex-wrap gap-1">
+                <TableCell className="hidden lg:table-cell align-top lg:min-w-[220px]">
+                  <div className="flex flex-wrap gap-1.5">
                     {(c.serviceTypes || []).slice(0, 2).map((s) => (
                       <Badge
                         key={s}
-                        variant="secondary"
-                        className="rounded-full bg-white/70"
+                        className="rounded-full bg-[color:var(--im-secondary)]/12 text-[color:var(--im-secondary)] ring-1 ring-[color:var(--im-secondary)]/20 px-2.5 py-0.5 text-xs font-medium"
                       >
                         {s}
                       </Badge>
