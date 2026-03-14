@@ -66,7 +66,7 @@ export function CampaignsTab({ clientId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-border/70 bg-white/70 p-5 shadow-sm">
+      <div className="rounded-3xl border border-border/60 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -86,8 +86,8 @@ export function CampaignsTab({ clientId }: Props) {
         <Separator className="my-5" />
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-3xl bg-[color:var(--im-navy)]/95 p-4 text-white ring-1 ring-white/10">
-            <div className="text-xs text-white/70">Total Spend</div>
+          <div className="rounded-3xl border border-primary/20 bg-primary/5 p-4 text-foreground ring-1 ring-primary/10">
+            <div className="text-xs text-muted-foreground">Total Spend</div>
             <div className="mt-1 text-2xl font-semibold tracking-tight">
               {formatCurrency(totals.totalSpend)}
             </div>
