@@ -6,6 +6,7 @@ import { SoftButton } from "@/components/app/SoftButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useData } from "@/contexts/DataContext";
@@ -113,6 +114,8 @@ export default function ClientDetail() {
           ? "bg-amber-200 text-amber-900"
           : "bg-slate-200 text-slate-900";
 
+  const includeInAgencyImpact = client.includeInAgencyImpact ?? true;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -192,6 +195,24 @@ export default function ClientDetail() {
                 <div>
                   <div className="text-xs text-white/70">CRM</div>
                   <div className="font-semibold">{client.crmUsed || "—"}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Include in Agency Impact</div>
+                    <div className="text-xs text-white/70">
+                      Default setting (can be overridden per month in ROI).
+                    </div>
+                  </div>
+                  <Switch
+                    checked={includeInAgencyImpact}
+                    onCheckedChange={(checked) =>
+                      updateClient(client.id, { includeInAgencyImpact: checked })
+                    }
+                    className="data-[state=checked]:bg-[color:var(--im-secondary)] data-[state=unchecked]:bg-white/30"
+                  />
                 </div>
               </div>
             </div>

@@ -377,6 +377,7 @@ export function createSeedData(): AppData {
         monthlyRetainer: 3500,
         oneTimeProjectValue: 0,
         totalLifetimeValue: 17500,
+        includeInAgencyImpact: true,
         notes: "Internal sample client used to demonstrate Imani OS.",
         internalContext:
           "Leadership cares about impact reporting and donor conversion. Follow-up speed is a known bottleneck.",

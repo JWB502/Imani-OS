@@ -16,6 +16,22 @@ import { readJson, writeJson } from "@/lib/storage";
 
 const DATA_KEY = "imani-os:data:v1";
 
+const STANDARD_REVENUE_NAME = "Revenue";
+const STANDARD_EXPENSES_NAME = "Service Expenses";
+
+function normalizeName(s: string) {
+  return s.trim().toLowerCase();
+}
+
+function isRevenueName(name: string) {
+  return normalizeName(name) === "revenue";
+}
+
+function isServiceExpensesName(name: string) {
+  const n = normalizeName(name);
+  return n === "service expenses" || n === "service expense";
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -23,6 +39,19 @@ function nowIso() {
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
+
+type BulkUpsertMonthlyMetricsParams = {
+  clientId: string;
+  months: string[]; // YYYY-MM
+  skipExisting?: boolean;
+  prefillServiceExpenses?: boolean;
+};
+
+type BulkUpsertMonthlyMetricsResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+};
 
 type DataContextValue = {
   data: AppData;
@@ -72,13 +101,22 @@ type DataContextValue = {
   ) => void;
 
   // ROI
+  ensureStandardMetricsForClient: (clientId: string) =>
+    | { revenueId: string; serviceExpensesId: string }
+    | undefined;
+
   createMetricDefinition: (
     patch: Omit<MetricDefinition, "id" | "createdAt" | "updatedAt">
   ) => MetricDefinition;
   updateMetricDefinition: (id: string, patch: Partial<MetricDefinition>) => void;
   deleteMetricDefinition: (id: string) => void;
 
-  upsertMonthlyMetric: (patch: Omit<MonthlyMetric, "id" | "createdAt" | "updatedAt"> & { id?: string }) => MonthlyMetric;
+  upsertMonthlyMetric: (
+    patch: Omit<MonthlyMetric, "id" | "createdAt" | "updatedAt"> & { id?: string }
+  ) => MonthlyMetric;
+  bulkUpsertMonthlyMetrics: (
+    params: BulkUpsertMonthlyMetricsParams,
+  ) => BulkUpsertMonthlyMetricsResult;
   deleteMonthlyMetric: (id: string) => void;
 };
 
@@ -99,6 +137,128 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     persist(seed);
   }, [persist]);
 
+  const ensureStandardMetricsInData = React.useCallback(
+    (base: AppData, clientId: string) => {
+      const defs = base.metricDefinitions.filter((m) => m.clientId === clientId);
+
+      const revenue =
+        defs.find((m) => m.isStandard && isRevenueName(m.name)) ??
+        defs.find((m) => isRevenueName(m.name));
+
+      const expenses =
+        defs.find((m) => m.isStandard && isServiceExpensesName(m.name)) ??
+        defs.find((m) => isServiceExpensesName(m.name));
+
+      let metricDefinitions = base.metricDefinitions;
+      let changed = false;
+
+      const touch = (id: string, patch: Partial<MetricDefinition>) => {
+        changed = true;
+        metricDefinitions = metricDefinitions.map((m) =>
+          m.id === id ? { ...m, ...patch, updatedAt: nowIso() } : m,
+        );
+      };
+
+      let revenueId = revenue?.id;
+      let serviceExpensesId = expenses?.id;
+
+      if (revenue) {
+        const needsPatch =
+          revenue.name !== STANDARD_REVENUE_NAME ||
+          revenue.kind !== "currency" ||
+          !revenue.locked ||
+          !revenue.isStandard;
+        if (needsPatch) {
+          touch(revenue.id, {
+            name: STANDARD_REVENUE_NAME,
+            kind: "currency",
+            locked: true,
+            isStandard: true,
+          });
+        }
+      } else {
+        const createdAt = nowIso();
+        const md: MetricDefinition = {
+          id: createId("md"),
+          clientId,
+          name: STANDARD_REVENUE_NAME,
+          kind: "currency",
+          locked: true,
+          isStandard: true,
+          createdAt,
+          updatedAt: createdAt,
+        };
+        revenueId = md.id;
+        metricDefinitions = [md, ...metricDefinitions];
+        changed = true;
+      }
+
+      if (expenses) {
+        const needsPatch =
+          expenses.name !== STANDARD_EXPENSES_NAME ||
+          expenses.kind !== "currency" ||
+          !expenses.locked ||
+          !expenses.isStandard;
+        if (needsPatch) {
+          touch(expenses.id, {
+            name: STANDARD_EXPENSES_NAME,
+            kind: "currency",
+            locked: true,
+            isStandard: true,
+          });
+        }
+      } else {
+        const createdAt = nowIso();
+        const md: MetricDefinition = {
+          id: createId("md"),
+          clientId,
+          name: STANDARD_EXPENSES_NAME,
+          kind: "currency",
+          locked: true,
+          isStandard: true,
+          createdAt,
+          updatedAt: createdAt,
+        };
+        serviceExpensesId = md.id;
+        metricDefinitions = [md, ...metricDefinitions];
+        changed = true;
+      }
+
+      return {
+        next: changed ? { ...base, metricDefinitions } : base,
+        changed,
+        revenueId,
+        serviceExpensesId,
+      };
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    let next = data;
+    let changed = false;
+
+    for (const c of data.clients) {
+      const res = ensureStandardMetricsInData(next, c.id);
+      if (res.changed) {
+        changed = true;
+        next = res.next;
+      }
+    }
+
+    if (changed) persist(next);
+  }, [data, ensureStandardMetricsInData, persist]);
+
+  const ensureStandardMetricsForClient = React.useCallback(
+    (clientId: string) => {
+      const res = ensureStandardMetricsInData(data, clientId);
+      if (res.changed) persist(res.next);
+      if (!res.revenueId || !res.serviceExpensesId) return undefined;
+      return { revenueId: res.revenueId, serviceExpensesId: res.serviceExpensesId };
+    },
+    [data, ensureStandardMetricsInData, persist],
+  );
+
   // Clients
   const createClient = React.useCallback(
     (patch: Omit<Client, "id" | "createdAt" | "updatedAt">) => {
@@ -107,6 +267,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         id: createId("cl"),
         createdAt,
         updatedAt: createdAt,
+        includeInAgencyImpact: patch.includeInAgencyImpact ?? true,
         ...patch,
       };
       persist({ ...data, clients: [client, ...data.clients] });
@@ -441,6 +602,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateMetricDefinition = React.useCallback(
     (id: string, patch: Partial<MetricDefinition>) => {
+      const existing = data.metricDefinitions.find((m) => m.id === id);
+      if (!existing) return;
+
+      if (existing.locked) {
+        const safePatch: Partial<MetricDefinition> = {
+          ...(patch.locked ? { locked: true } : {}),
+          ...(patch.isStandard ? { isStandard: true } : {}),
+        };
+        if (Object.keys(safePatch).length === 0) return;
+        persist({
+          ...data,
+          metricDefinitions: data.metricDefinitions.map((m) =>
+            m.id === id ? { ...m, ...safePatch, updatedAt: nowIso() } : m,
+          ),
+        });
+        return;
+      }
+
       persist({
         ...data,
         metricDefinitions: data.metricDefinitions.map((m) =>
@@ -453,6 +632,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const deleteMetricDefinition = React.useCallback(
     (id: string) => {
+      const existing = data.metricDefinitions.find((m) => m.id === id);
+      if (existing?.locked) return;
+
       persist({
         ...data,
         metricDefinitions: data.metricDefinitions.filter((m) => m.id !== id),
@@ -481,6 +663,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           ...existing,
           ...patch,
           values: { ...existing.values, ...patch.values },
+          includeInAgencyImpact:
+            patch.includeInAgencyImpact ?? existing.includeInAgencyImpact,
           updatedAt: nowIso(),
         };
         persist({
@@ -493,6 +677,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       const createdAt = nowIso();
+      const client = data.clients.find((c) => c.id === patch.clientId);
       const mm: MonthlyMetric = {
         id: createId("mm"),
         createdAt,
@@ -500,12 +685,117 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         clientId: patch.clientId,
         month: patch.month,
         values: patch.values,
+        includeInAgencyImpact:
+          patch.includeInAgencyImpact ?? client?.includeInAgencyImpact ?? true,
         notes: patch.notes,
       };
       persist({ ...data, monthlyMetrics: [mm, ...data.monthlyMetrics] });
       return mm;
     },
     [data, persist],
+  );
+
+  const bulkUpsertMonthlyMetrics = React.useCallback(
+    (params: BulkUpsertMonthlyMetricsParams): BulkUpsertMonthlyMetricsResult => {
+      const client = data.clients.find((c) => c.id === params.clientId);
+      if (!client) return { created: 0, updated: 0, skipped: 0 };
+
+      const ensureRes = ensureStandardMetricsInData(data, params.clientId);
+      const base = ensureRes.next;
+
+      const defs = base.metricDefinitions.filter((m) => m.clientId === params.clientId);
+      const expensesMd =
+        defs.find((m) => m.isStandard && isServiceExpensesName(m.name)) ??
+        defs.find((m) => isServiceExpensesName(m.name));
+
+      const expensesId = expensesMd?.id;
+      const shouldPrefill =
+        params.prefillServiceExpenses &&
+        expensesId &&
+        typeof client.monthlyRetainer === "number" &&
+        Number.isFinite(client.monthlyRetainer);
+
+      const byMonth = new Map(
+        base.monthlyMetrics
+          .filter((mm) => mm.clientId === params.clientId)
+          .map((mm) => [mm.month, mm] as const),
+      );
+
+      let monthlyMetrics = base.monthlyMetrics;
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+
+      const defaultInclude = client.includeInAgencyImpact ?? true;
+
+      for (const month of params.months) {
+        const existing = byMonth.get(month);
+        if (existing) {
+          if (params.skipExisting !== false) {
+            skipped++;
+            continue;
+          }
+
+          const valuesPatch: Record<string, number> = {};
+          if (shouldPrefill && expensesId && existing.values[expensesId] === undefined) {
+            valuesPatch[expensesId] = client.monthlyRetainer as number;
+          }
+
+          const includePatch: Partial<MonthlyMetric> = {};
+          if (existing.includeInAgencyImpact === undefined) {
+            includePatch.includeInAgencyImpact = defaultInclude;
+          }
+
+          if (
+            Object.keys(valuesPatch).length === 0 &&
+            includePatch.includeInAgencyImpact === undefined
+          ) {
+            skipped++;
+            continue;
+          }
+
+          const nextMm: MonthlyMetric = {
+            ...existing,
+            ...includePatch,
+            values: { ...existing.values, ...valuesPatch },
+            updatedAt: nowIso(),
+          };
+
+          monthlyMetrics = monthlyMetrics.map((m) => (m.id === existing.id ? nextMm : m));
+          updated++;
+          continue;
+        }
+
+        const createdAt = nowIso();
+        const values: Record<string, number> = {};
+        if (shouldPrefill && expensesId) {
+          values[expensesId] = client.monthlyRetainer as number;
+        }
+
+        const mm: MonthlyMetric = {
+          id: createId("mm"),
+          createdAt,
+          updatedAt: createdAt,
+          clientId: params.clientId,
+          month,
+          values,
+          includeInAgencyImpact: defaultInclude,
+        };
+
+        monthlyMetrics = [mm, ...monthlyMetrics];
+        created++;
+      }
+
+      const didChange =
+        ensureRes.changed || created > 0 || updated > 0 || monthlyMetrics !== base.monthlyMetrics;
+
+      if (didChange) {
+        persist({ ...base, monthlyMetrics });
+      }
+
+      return { created, updated, skipped };
+    },
+    [data, ensureStandardMetricsInData, persist],
   );
 
   const deleteMonthlyMetric = React.useCallback(
@@ -543,10 +833,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         deleteReport,
         reorderReportSections,
         updateReportSection,
+        ensureStandardMetricsForClient,
         createMetricDefinition,
         updateMetricDefinition,
         deleteMetricDefinition,
         upsertMonthlyMetric,
+        bulkUpsertMonthlyMetrics,
         deleteMonthlyMetric,
       }}
     >

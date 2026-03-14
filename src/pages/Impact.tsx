@@ -12,10 +12,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useData } from "@/contexts/DataContext";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 
 function normalizeName(s: string) {
   return s.trim().toLowerCase();
+}
+
+function withinProjectDates(
+  client: { startDate?: string; endDate?: string },
+  month: string, // YYYY-MM
+) {
+  const startMonth = client.startDate?.slice(0, 7);
+  const endMonth = client.endDate?.slice(0, 7);
+  if (startMonth && month < startMonth) return false;
+  if (endMonth && month > endMonth) return false;
+  return true;
 }
 
 export default function Impact() {
@@ -95,6 +106,63 @@ export default function Impact() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([month, value]) => ({ month, value }));
 
+  const agencyRoi = React.useMemo(() => {
+    const clientsById = new Map(data.clients.map((c) => [c.id, c] as const));
+
+    const standardByClientId = new Map<string, { revenueId?: string; expensesId?: string }>();
+    for (const c of data.clients) {
+      const defs = data.metricDefinitions.filter((m) => m.clientId === c.id);
+
+      const revenue =
+        defs.find((m) => m.isStandard && normalizeName(m.name) === "revenue") ??
+        defs.find((m) => normalizeName(m.name) === "revenue");
+
+      const expenses =
+        defs.find((m) => m.isStandard && normalizeName(m.name) === "service expenses") ??
+        defs.find((m) => normalizeName(m.name) === "service expenses") ??
+        defs.find((m) => normalizeName(m.name) === "service expense");
+
+      standardByClientId.set(c.id, { revenueId: revenue?.id, expensesId: expenses?.id });
+    }
+
+    let sum = 0;
+    let count = 0;
+    let excludedMissingExpenses = 0;
+
+    for (const mm of data.monthlyMetrics) {
+      const client = clientsById.get(mm.clientId);
+      if (!client) continue;
+
+      const clientInclude = client.includeInAgencyImpact ?? true;
+      if (!clientInclude) continue;
+      if (!withinProjectDates(client, mm.month)) continue;
+
+      const monthInclude = mm.includeInAgencyImpact ?? clientInclude;
+      if (!monthInclude) continue;
+
+      const ids = standardByClientId.get(mm.clientId);
+      if (!ids?.revenueId || !ids?.expensesId) continue;
+
+      const revenue = mm.values[ids.revenueId];
+      const expenses = mm.values[ids.expensesId];
+
+      if (!Number.isFinite(expenses) || expenses <= 0 || !Number.isFinite(revenue)) {
+        excludedMissingExpenses++;
+        continue;
+      }
+
+      const roi = ((revenue - expenses) / expenses) * 100;
+      sum += roi;
+      count += 1;
+    }
+
+    return {
+      average: count > 0 ? sum / count : undefined,
+      includedMonths: count,
+      excludedMissingExpenses,
+    };
+  }, [data.clients, data.metricDefinitions, data.monthlyMetrics]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -173,7 +241,14 @@ export default function Impact() {
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Area type="monotone" dataKey="value" stroke="#185391" fill="#26bbc0" fillOpacity={0.25} strokeWidth={3} />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#185391"
+                      fill="#26bbc0"
+                      fillOpacity={0.25}
+                      strokeWidth={3}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -181,28 +256,54 @@ export default function Impact() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Impact totals</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
-              <div className="text-xs text-muted-foreground">Total revenue tracked</div>
-              <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.revenue)}</div>
-            </div>
-            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
-              <div className="text-xs text-muted-foreground">Total donations influenced</div>
-              <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.donations)}</div>
-            </div>
-            <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
-              <div className="text-xs text-white/80">Estimated value created</div>
-              <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.estimatedValue)}</div>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Totals are computed from ROI KPI definitions (custom per client).
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Agency ROI</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                Includes months within each client’s project dates and marked “Include in Agency Impact”.
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
+                <div className="text-xs text-white/70">Average monthly ROI</div>
+                <div className="mt-1 text-3xl font-semibold tracking-tight">
+                  {agencyRoi.average === undefined ? "—" : formatPercent(agencyRoi.average, 0)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
+                <div className="text-xs text-muted-foreground">Months included</div>
+                <div className="mt-1 text-2xl font-semibold">{agencyRoi.includedMonths}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Excluded {agencyRoi.excludedMissingExpenses} month{agencyRoi.excludedMissingExpenses === 1 ? "" : "s"} due to missing revenue/expenses.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Impact totals</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
+                <div className="text-xs text-muted-foreground">Total revenue tracked</div>
+                <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.revenue)}</div>
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
+                <div className="text-xs text-muted-foreground">Total donations influenced</div>
+                <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.donations)}</div>
+              </div>
+              <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
+                <div className="text-xs text-white/80">Estimated value created</div>
+                <div className="mt-1 text-2xl font-semibold">{formatCurrency(totals.estimatedValue)}</div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Totals are computed from ROI KPI definitions (custom per client).
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ export type Client = {
   oneTimeProjectValue?: number;
   totalLifetimeValue?: number;
   internalContext?: string;
+  includeInAgencyImpact?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -161,6 +162,8 @@ export type MetricDefinition = {
   name: string;
   unit?: string;
   kind: "number" | "currency" | "percent";
+  locked?: boolean;
+  isStandard?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -170,6 +173,7 @@ export type MonthlyMetric = {
   clientId: ID;
   month: string; // YYYY-MM
   values: Record<ID, number>; // metricDefinitionId -> value
+  includeInAgencyImpact?: boolean;
   notes?: string;
   createdAt: string;
   updatedAt: string;

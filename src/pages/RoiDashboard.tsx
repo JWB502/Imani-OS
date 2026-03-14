@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, TrendingUp, Trash2 } from "lucide-react";
+import { CalendarPlus, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
 import {
   Line,
   LineChart,
@@ -35,6 +35,13 @@ import { useData } from "@/contexts/DataContext";
 import type { MetricDefinition } from "@/types/imani";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { SoftButton } from "@/components/app/SoftButton";
+import { BulkMonthAddDialog } from "@/components/roi/BulkMonthAddDialog";
+import { RoiSummary } from "@/components/roi/RoiSummary";
+import { ImpactToggle } from "@/components/roi/ImpactToggle";
+
+function normalizeName(s: string) {
+  return s.trim().toLowerCase();
+}
 
 function metricLabel(md: MetricDefinition) {
   if (md.kind === "currency") return `${md.name} ($)`;
@@ -42,10 +49,29 @@ function metricLabel(md: MetricDefinition) {
   return md.name;
 }
 
+function metricSort(a: MetricDefinition, b: MetricDefinition) {
+  const aStd = a.isStandard ? 1 : 0;
+  const bStd = b.isStandard ? 1 : 0;
+  if (aStd !== bStd) return bStd - aStd;
+
+  const aKey = normalizeName(a.name);
+  const bKey = normalizeName(b.name);
+  const order = new Map([
+    ["revenue", 0],
+    ["service expenses", 1],
+  ]);
+  const ao = order.get(aKey);
+  const bo = order.get(bKey);
+  if (ao !== undefined || bo !== undefined) return (ao ?? 99) - (bo ?? 99);
+
+  return a.name.localeCompare(b.name);
+}
+
 export default function RoiDashboard() {
   const { toast } = useToast();
   const {
     data,
+    ensureStandardMetricsForClient,
     createMetricDefinition,
     updateMetricDefinition,
     deleteMetricDefinition,
@@ -56,7 +82,9 @@ export default function RoiDashboard() {
   const [params, setParams] = useSearchParams();
 
   const clientIdFromUrl = params.get("clientId") ?? "";
-  const [clientId, setClientId] = React.useState(clientIdFromUrl || data.clients[0]?.id || "");
+  const [clientId, setClientId] = React.useState(
+    clientIdFromUrl || data.clients[0]?.id || "",
+  );
 
   React.useEffect(() => {
     if (clientId && clientId !== clientIdFromUrl) {
@@ -66,12 +94,37 @@ export default function RoiDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  React.useEffect(() => {
+    if (!clientId) return;
+    ensureStandardMetricsForClient(clientId);
+  }, [clientId, ensureStandardMetricsForClient]);
+
   const client = data.clients.find((c) => c.id === clientId);
 
   const metricDefs = data.metricDefinitions
     .filter((m) => m.clientId === clientId)
     .slice()
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort(metricSort);
+
+  const revenueMd =
+    metricDefs.find((m) => m.isStandard && normalizeName(m.name) === "revenue") ??
+    metricDefs.find((m) => normalizeName(m.name) === "revenue");
+
+  const expensesMd =
+    metricDefs.find(
+      (m) => m.isStandard &&
+        (normalizeName(m.name) === "service expenses" || normalizeName(m.name) === "service expense"),
+    ) ??
+    metricDefs.find(
+      (m) =>
+        normalizeName(m.name) === "service expenses" ||
+        normalizeName(m.name) === "service expense",
+    );
+
+  const standardIds = new Set([revenueMd?.id, expensesMd?.id].filter(Boolean) as string[]);
+
+  const standardMetricDefs = [revenueMd, expensesMd].filter(Boolean) as MetricDefinition[];
+  const customMetricDefs = metricDefs.filter((m) => !standardIds.has(m.id));
 
   const months = data.monthlyMetrics
     .filter((m) => m.clientId === clientId)
@@ -86,6 +139,12 @@ export default function RoiDashboard() {
   }, [latestMonth, clientId]);
 
   const monthEntry = months.find((m) => m.month === activeMonth);
+
+  const effectiveIncludeInAgencyImpact =
+    monthEntry?.includeInAgencyImpact ?? client?.includeInAgencyImpact ?? true;
+
+  const monthRevenue = revenueMd ? monthEntry?.values[revenueMd.id] : undefined;
+  const monthExpenses = expensesMd ? monthEntry?.values[expensesMd.id] : undefined;
 
   const [metricForChart, setMetricForChart] = React.useState(metricDefs[0]?.id ?? "");
   React.useEffect(() => {
@@ -105,6 +164,8 @@ export default function RoiDashboard() {
     last === undefined || prev === undefined ? undefined : Math.round((last - prev) * 100) / 100;
 
   const [openMetric, setOpenMetric] = React.useState(false);
+  const [openBulk, setOpenBulk] = React.useState(false);
+
   const [newMetricName, setNewMetricName] = React.useState("");
   const [newMetricKind, setNewMetricKind] = React.useState<MetricDefinition["kind"]>("number");
   const [newMetricUnit, setNewMetricUnit] = React.useState("");
@@ -116,6 +177,22 @@ export default function RoiDashboard() {
       </div>
     );
   }
+
+  const setMetricValue = (mdId: string, nextRaw: string) => {
+    const v = nextRaw ? Number(nextRaw) : undefined;
+    const values = { ...(monthEntry?.values ?? {}) };
+    if (v === undefined || Number.isNaN(v)) delete values[mdId];
+    else values[mdId] = v;
+
+    upsertMonthlyMetric({
+      clientId,
+      month: activeMonth,
+      values,
+      notes: monthEntry?.notes,
+      includeInAgencyImpact: monthEntry?.includeInAgencyImpact,
+      id: monthEntry?.id,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -138,6 +215,14 @@ export default function RoiDashboard() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            variant="secondary"
+            onClick={() => setOpenBulk(true)}
+            className="h-11 rounded-2xl bg-white/70 ring-1 ring-border/60 hover:bg-white"
+          >
+            <CalendarPlus className="mr-2 h-4 w-4 text-[color:var(--im-secondary)]" /> Bulk add months
+          </Button>
 
           <Button onClick={() => setOpenMetric(true)} className="h-11 rounded-2xl">
             <Plus className="mr-2 h-4 w-4" /> Add KPI
@@ -204,7 +289,13 @@ export default function RoiDashboard() {
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="value" stroke="#26bbc0" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#26bbc0"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -234,80 +325,116 @@ export default function RoiDashboard() {
               </SelectContent>
             </Select>
 
-            {metricDefs.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-white/70 p-6 text-center text-sm text-muted-foreground">
-                Add KPI definitions to begin tracking ROI.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {metricDefs.map((md) => {
-                  const raw = monthEntry?.values[md.id];
-                  return (
-                    <div key={md.id} className="grid grid-cols-12 gap-2">
-                      <div className="col-span-7">
-                        <div className="text-sm font-medium">{md.name}</div>
-                        <div className="text-xs text-muted-foreground">{md.kind}</div>
+            <div className="space-y-2">
+              <div className="rounded-3xl bg-white/70 p-4 ring-1 ring-border/60">
+                <div className="text-sm font-semibold text-[color:var(--im-navy)]">Standard KPIs</div>
+                <div className="mt-3 space-y-2">
+                  {standardMetricDefs.map((md) => {
+                    const raw = monthEntry?.values[md.id];
+                    return (
+                      <div key={md.id} className="grid grid-cols-12 gap-2">
+                        <div className="col-span-7">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Lock className="h-4 w-4 text-muted-foreground" /> {md.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Currency</div>
+                        </div>
+                        <Input
+                          className="col-span-5 h-11 rounded-2xl bg-white/70"
+                          inputMode="decimal"
+                          value={raw ?? ""}
+                          onChange={(e) => setMetricValue(md.id, e.target.value)}
+                        />
                       </div>
-                      <Input
-                        className="col-span-5 h-11 rounded-2xl bg-white/70"
-                        inputMode="decimal"
-                        value={raw ?? ""}
-                        onChange={(e) => {
-                          const v = e.target.value ? Number(e.target.value) : undefined;
-                          const values = { ...(monthEntry?.values ?? {}) };
-                          if (v === undefined || Number.isNaN(v)) delete values[md.id];
-                          else values[md.id] = v;
+                    );
+                  })}
+                </div>
 
-                          upsertMonthlyMetric({
-                            clientId,
-                            month: activeMonth,
-                            values,
-                            notes: monthEntry?.notes,
-                            id: monthEntry?.id,
-                          });
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-
-                <div className="pt-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={monthEntry?.notes ?? ""}
-                    onChange={(e) => {
+                <div className="mt-3 grid gap-2">
+                  <RoiSummary revenue={monthRevenue} expenses={monthExpenses} />
+                  <ImpactToggle
+                    checked={effectiveIncludeInAgencyImpact}
+                    onCheckedChange={(checked) => {
                       upsertMonthlyMetric({
                         clientId,
                         month: activeMonth,
                         values: monthEntry?.values ?? {},
-                        notes: e.target.value,
+                        notes: monthEntry?.notes,
+                        includeInAgencyImpact: checked,
                         id: monthEntry?.id,
                       });
+                      toast({ title: "Agency Impact updated." });
                     }}
-                    className="mt-2 min-h-24 rounded-2xl bg-white/70"
-                    placeholder="Explain wins, anomalies, context…"
                   />
                 </div>
-
-                {monthEntry ? (
-                  <Button
-                    variant="destructive"
-                    className="w-full rounded-2xl"
-                    onClick={() => {
-                      if (!confirm(`Delete ROI entry for ${activeMonth}?`)) return;
-                      deleteMonthlyMetric(monthEntry.id);
-                      toast({ title: "Monthly entry deleted." });
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete month
-                  </Button>
-                ) : (
-                  <Badge className="w-full justify-center rounded-2xl bg-primary/10 text-primary">
-                    Autosaved on first value
-                  </Badge>
-                )}
               </div>
-            )}
+
+              {customMetricDefs.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border/70 bg-white/70 p-6 text-center text-sm text-muted-foreground">
+                  Add custom KPIs (leads, calls, reviews, donations, etc.).
+                </div>
+              ) : (
+                <div className="rounded-3xl bg-white/70 p-4 ring-1 ring-border/60">
+                  <div className="text-sm font-semibold text-[color:var(--im-navy)]">Custom KPIs</div>
+                  <div className="mt-3 space-y-2">
+                    {customMetricDefs.map((md) => {
+                      const raw = monthEntry?.values[md.id];
+                      return (
+                        <div key={md.id} className="grid grid-cols-12 gap-2">
+                          <div className="col-span-7">
+                            <div className="text-sm font-medium">{md.name}</div>
+                            <div className="text-xs text-muted-foreground">{md.kind}</div>
+                          </div>
+                          <Input
+                            className="col-span-5 h-11 rounded-2xl bg-white/70"
+                            inputMode="decimal"
+                            value={raw ?? ""}
+                            onChange={(e) => setMetricValue(md.id, e.target.value)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={monthEntry?.notes ?? ""}
+                  onChange={(e) => {
+                    upsertMonthlyMetric({
+                      clientId,
+                      month: activeMonth,
+                      values: monthEntry?.values ?? {},
+                      notes: e.target.value,
+                      includeInAgencyImpact: monthEntry?.includeInAgencyImpact,
+                      id: monthEntry?.id,
+                    });
+                  }}
+                  className="mt-2 min-h-24 rounded-2xl bg-white/70"
+                  placeholder="Explain wins, anomalies, context…"
+                />
+              </div>
+
+              {monthEntry ? (
+                <Button
+                  variant="destructive"
+                  className="w-full rounded-2xl"
+                  onClick={() => {
+                    if (!confirm(`Delete ROI entry for ${activeMonth}?`)) return;
+                    deleteMonthlyMetric(monthEntry.id);
+                    toast({ title: "Monthly entry deleted." });
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete month
+                </Button>
+              ) : (
+                <Badge className="w-full justify-center rounded-2xl bg-primary/10 text-primary">
+                  Autosaved on first value
+                </Badge>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -316,7 +443,7 @@ export default function RoiDashboard() {
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="text-base">KPI definitions</CardTitle>
-            <div className="text-sm text-muted-foreground">Custom per client</div>
+            <div className="text-sm text-muted-foreground">Standard + custom per client</div>
           </div>
           <Button onClick={() => setOpenMetric(true)} className="rounded-2xl">
             <TrendingUp className="mr-2 h-4 w-4" /> Add KPI
@@ -329,7 +456,15 @@ export default function RoiDashboard() {
               className="flex flex-col gap-2 rounded-2xl bg-white/70 p-3 ring-1 ring-border/60 md:flex-row md:items-center md:justify-between"
             >
               <div>
-                <div className="font-medium">{md.name}</div>
+                <div className="flex items-center gap-2 font-medium">
+                  {md.locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : null}
+                  {md.name}
+                  {md.locked ? (
+                    <Badge className="ml-2 rounded-full bg-primary/10 text-primary">
+                      Standard
+                    </Badge>
+                  ) : null}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {md.kind}
                   {md.unit ? ` • ${md.unit}` : ""}
@@ -337,7 +472,8 @@ export default function RoiDashboard() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <SoftButton
-                  className="rounded-2xl bg-white"
+                  disabled={md.locked}
+                  className="rounded-2xl bg-white disabled:opacity-50"
                   onClick={() => {
                     const nextKind =
                       md.kind === "number"
@@ -353,7 +489,8 @@ export default function RoiDashboard() {
                 </SoftButton>
                 <Button
                   variant="destructive"
-                  className="rounded-2xl"
+                  disabled={md.locked}
+                  className="rounded-2xl disabled:opacity-50"
                   onClick={() => {
                     if (!confirm(`Delete KPI "${md.name}"?`)) return;
                     deleteMetricDefinition(md.id);
@@ -389,7 +526,7 @@ export default function RoiDashboard() {
                 value={newMetricName}
                 onChange={(e) => setNewMetricName(e.target.value)}
                 className="h-11 rounded-2xl"
-                placeholder="Leads, Revenue, Donations…"
+                placeholder="Leads, Reviews, Calls…"
               />
             </div>
             <div className="grid gap-2">
@@ -416,7 +553,11 @@ export default function RoiDashboard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" className="rounded-2xl" onClick={() => setOpenMetric(false)}>
+            <Button
+              variant="secondary"
+              className="rounded-2xl"
+              onClick={() => setOpenMetric(false)}
+            >
               Cancel
             </Button>
             <Button
@@ -443,6 +584,13 @@ export default function RoiDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkMonthAddDialog
+        open={openBulk}
+        onOpenChange={setOpenBulk}
+        client={client}
+        existingMonths={months.map((m) => m.month)}
+      />
     </div>
   );
 }

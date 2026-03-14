@@ -14,6 +14,15 @@ export function formatNumber(value?: number) {
   );
 }
 
+export function formatPercent(value?: number, digits = 0) {
+  if (value === undefined || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value / 100);
+}
+
 export function formatDate(value?: string) {
   if (!value) return "—";
   try {
