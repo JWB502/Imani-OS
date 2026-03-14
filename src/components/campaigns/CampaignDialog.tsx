@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, TrendingUp } from "lucide-react";
 
 import {
   AlertDialog,
@@ -227,7 +227,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-3xl border-border/70 bg-white/80 p-0 shadow-xl backdrop-blur">
-        <div className="p-6 sm:p-7">
+        <div className="p-6 sm:p-7 md:p-8 space-y-6">
           <DialogHeader className="gap-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -409,10 +409,17 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
               <div className="rounded-3xl border border-border/70 bg-white/70 p-4">
                 <div className="text-sm font-semibold">Results</div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  Add ad-hoc metrics like leads, calls, sign-ups, or bookings.
+                  Track outcomes for this campaign. Use Metric, Value, and Unit (optional). Examples: Leads, Calls, Sign-ups, Bookings.
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 grid grid-cols-12 gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                  <div className="col-span-6">Metric</div>
+                  <div className="col-span-3">Value</div>
+                  <div className="col-span-2">Unit</div>
+                  <div className="col-span-1 text-right">Remove</div>
+                </div>
+
+                <div className="mt-2 space-y-3">
                   {results.map((r, idx) => (
                     <div key={r.id} className="grid grid-cols-12 gap-2">
                       <div className="col-span-6">
@@ -423,7 +430,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                               prev.map((p) => (p.id === r.id ? { ...p, name: e.target.value } : p)),
                             )
                           }
-                          placeholder={idx === 0 ? "Leads" : "Metric name"}
+                          placeholder={idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"}
+                          aria-label="Result metric name"
                           className="h-9 rounded-2xl bg-white/80"
                         />
                       </div>
@@ -438,7 +446,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                               prev.map((p) => (p.id === r.id ? { ...p, value: e.target.value } : p)),
                             )
                           }
-                          placeholder="0"
+                          placeholder="Number"
+                          aria-label="Result value"
                           className="h-9 rounded-2xl bg-white/80"
                         />
                       </div>
@@ -450,7 +459,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                               prev.map((p) => (p.id === r.id ? { ...p, unit: e.target.value } : p)),
                             )
                           }
-                          placeholder="Unit"
+                          placeholder="Unit (optional)"
+                          aria-label="Result unit (optional)"
                           className="h-9 rounded-2xl bg-white/80"
                         />
                       </div>
@@ -489,16 +499,30 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-[color:var(--im-navy)]/95 p-4 text-white ring-1 ring-white/10">
-                <div className="text-sm font-semibold">Live ROI</div>
-                <div className="mt-1 text-xs text-white/70">
+              <div className="rounded-3xl border border-primary/20 bg-primary/5 p-4 text-foreground ring-1 ring-primary/10">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--im-navy)]">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Live ROI
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
                   Based on Income and Actual Ad Spend.
                 </div>
                 <div className="mt-4 flex items-end justify-between gap-3">
-                  <div className="text-3xl font-semibold tracking-tight">
+                  <div
+                    className={cn(
+                      "text-3xl font-semibold tracking-tight",
+                      roi === undefined
+                        ? "text-foreground/70"
+                        : roi >= 25
+                          ? "text-emerald-700"
+                          : roi >= 0
+                            ? "text-sky-700"
+                            : "text-rose-700",
+                    )}
+                  >
                     {roi === undefined ? "—" : formatPercent(roi)}
                   </div>
-                  <div className="text-right text-xs text-white/70">
+                  <div className="text-right text-xs text-muted-foreground">
                     Spend must be greater than 0
                   </div>
                 </div>
