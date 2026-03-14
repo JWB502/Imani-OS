@@ -403,9 +403,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                   className="min-h-[110px] rounded-2xl bg-white/80"
                 />
               </div>
-            </div>
 
-            <div className="space-y-4">
               <div className="rounded-3xl border border-border/70 bg-white/70 p-4">
                 <div className="text-sm font-semibold">Results</div>
                 <div className="mt-1 text-xs text-muted-foreground">
@@ -498,7 +496,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                   </Button>
                 </div>
               </div>
+            </div>
 
+            <div className="space-y-4">
               <div className="rounded-3xl border border-primary/20 bg-primary/5 p-4 text-foreground ring-1 ring-primary/10">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--im-navy)]">
                   <TrendingUp className="h-4 w-4 text-primary" />
