@@ -6,7 +6,7 @@ import {
   useOutletContext,
   useSearchParams,
 } from "react-router-dom";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, Plus, Trash2 } from "lucide-react";
 
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
 export default function Reports() {
-  const { data, createReportFromTemplate, deleteReport } = useData();
+  const { data, createReportFromTemplate, duplicateReport, deleteReport } = useData();
   const { settings } = useSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -182,6 +182,18 @@ export default function Reports() {
                       className="h-9 rounded-2xl bg-white"
                     >
                       <Link to={`/reports/${r.id}`}>Open</Link>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-9 rounded-2xl bg-white"
+                      onClick={() => {
+                        const dupe = duplicateReport(r.id);
+                        if (!dupe) return;
+                        toast({ title: "Report duplicated." });
+                        navigate(`/reports/${dupe.id}`);
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Duplicate
                     </Button>
                     <Button
                       variant="destructive"

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FilePlus2, Pencil, Sparkles, TrendingUp, Trash2 } from "lucide-react";
+import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useData } from "@/contexts/DataContext";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { SectionBlock } from "@/types/imani";
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -19,6 +20,74 @@ export default function ClientDetail() {
   const client = data.clients.find((c) => c.id === id);
   const reports = data.reports.filter((r) => r.clientId === id);
   const wins = data.wins.filter((w) => w.clientId === id);
+  const monthly = data.monthlyMetrics.filter((m) => m.clientId === id);
+
+  const attachments = React.useMemo(() => {
+    const out: Array<{
+      reportId: string;
+      reportTitle: string;
+      label: string;
+      url: string;
+    }> = [];
+
+    for (const r of reports) {
+      for (const s of r.sections) {
+        for (const b of s.blocks) {
+          const block = b as SectionBlock;
+          if (block.type !== "image") continue;
+          if (!block.url) continue;
+          out.push({
+            reportId: r.id,
+            reportTitle: r.title,
+            label: `${s.title} — ${block.label}`,
+            url: block.url,
+          });
+        }
+      }
+    }
+    return out;
+  }, [reports]);
+
+  const activity = React.useMemo(() => {
+    const items: Array<{ date: string; title: string; href?: string; meta?: string }> = [];
+
+    for (const r of reports) {
+      items.push({
+        date: r.createdAt,
+        title: `Report created: ${r.title}`,
+        href: `/reports/${r.id}`,
+        meta: r.reportType,
+      });
+      if (r.status === "Complete") {
+        items.push({
+          date: r.updatedAt,
+          title: `Report completed: ${r.title}`,
+          href: `/reports/${r.id}`,
+        });
+      }
+    }
+
+    for (const w of wins) {
+      items.push({
+        date: `${w.date}T12:00:00.000Z`,
+        title: `Win logged: ${w.title}`,
+        href: w.linkedReportId ? `/reports/${w.linkedReportId}` : undefined,
+        meta: w.category,
+      });
+    }
+
+    for (const m of monthly) {
+      items.push({
+        date: `${m.month}-01T12:00:00.000Z`,
+        title: `ROI updated: ${m.month}`,
+        href: `/roi?clientId=${client?.id ?? ""}`,
+      });
+    }
+
+    return items
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 40);
+  }, [reports, wins, monthly, client?.id]);
 
   if (!client) {
     return (
@@ -194,6 +263,9 @@ export default function ClientDetail() {
           <TabsTrigger value="wins" className="rounded-2xl">
             Wins
           </TabsTrigger>
+          <TabsTrigger value="activity" className="rounded-2xl">
+            Activity
+          </TabsTrigger>
           <TabsTrigger value="notes" className="rounded-2xl">
             Notes
           </TabsTrigger>
@@ -279,6 +351,83 @@ export default function ClientDetail() {
                 </Link>
               </Button>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="mt-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Timeline</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {activity.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-white/70 p-8 text-center text-sm text-muted-foreground">
+                    Activity will appear as you create reports, track ROI, and log wins.
+                  </div>
+                ) : (
+                  activity.map((a, idx) => (
+                    <div
+                      key={`${a.date}_${idx}`}
+                      className="flex items-start justify-between gap-3 rounded-2xl bg-white/70 p-3 ring-1 ring-border/60"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">
+                          {a.href ? (
+                            <Link className="underline-offset-4 hover:underline" to={a.href}>
+                              {a.title}
+                            </Link>
+                          ) : (
+                            a.title
+                          )}
+                        </div>
+                        {a.meta ? (
+                          <div className="text-xs text-muted-foreground">{a.meta}</div>
+                        ) : null}
+                      </div>
+                      <div className="shrink-0 text-xs text-muted-foreground">
+                        {formatDate(a.date)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-4 w-4 text-primary" /> Attachments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {attachments.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-white/70 p-6 text-center text-sm text-muted-foreground">
+                    Add image blocks in reports to collect screenshots here.
+                  </div>
+                ) : (
+                  attachments.slice(0, 12).map((a) => (
+                    <a
+                      key={`${a.reportId}_${a.url}`}
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-2xl bg-white/70 p-3 ring-1 ring-border/60 hover:bg-white"
+                    >
+                      <div className="text-sm font-medium">{a.label}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        From: {a.reportTitle}
+                      </div>
+                    </a>
+                  ))
+                )}
+                {attachments.length > 12 ? (
+                  <div className="text-xs text-muted-foreground">
+                    Showing 12 of {attachments.length}.
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

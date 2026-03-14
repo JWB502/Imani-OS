@@ -61,6 +61,7 @@ type DataContextValue = {
     reportingPeriod?: string;
     analyst?: string;
   }) => Report;
+  duplicateReport: (id: string) => Report | undefined;
   updateReport: (id: string, patch: Partial<Report>) => void;
   deleteReport: (id: string) => void;
   reorderReportSections: (reportId: string, sectionIds: string[]) => void;
@@ -329,6 +330,56 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [data, persist],
   );
 
+  const duplicateReport = React.useCallback(
+    (id: string) => {
+      const src = data.reports.find((r) => r.id === id);
+      if (!src) return undefined;
+
+      const createdAt = nowIso();
+
+      const sections: ReportSection[] = src.sections.map((s) => ({
+        ...deepClone(s),
+        id: createId("rs"),
+        blocks: deepClone(s.blocks).map((b: any) => {
+          const base = { ...b, id: createId("blk") };
+          if (b.type === "checklist") {
+            return {
+              ...base,
+              items: (b.items ?? []).map((it: any) => ({
+                ...it,
+                id: createId("chk"),
+              })),
+            };
+          }
+          if (b.type === "kpi") {
+            return {
+              ...base,
+              items: (b.items ?? []).map((it: any) => ({
+                ...it,
+                id: createId("kpi"),
+              })),
+            };
+          }
+          return base;
+        }),
+      }));
+
+      const dupe: Report = {
+        ...deepClone(src),
+        id: createId("rp"),
+        title: `${src.title} (Copy)`,
+        status: "Draft",
+        createdAt,
+        updatedAt: createdAt,
+        sections,
+      };
+
+      persist({ ...data, reports: [dupe, ...data.reports] });
+      return dupe;
+    },
+    [data, persist],
+  );
+
   const updateReport = React.useCallback(
     (id: string, patch: Partial<Report>) => {
       persist({
@@ -487,6 +538,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         duplicateFullTemplate,
         deleteFullTemplate,
         createReportFromTemplate,
+        duplicateReport,
         updateReport,
         deleteReport,
         reorderReportSections,

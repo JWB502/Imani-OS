@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Copy, Layers, Plus, Trash2 } from "lucide-react";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
+import { Copy, Layers, Plus, Search, Trash2 } from "lucide-react";
 
+import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +34,35 @@ export default function Templates() {
     deleteFullTemplate,
   } = useData();
 
+  const { globalSearchQuery } = useOutletContext<AppLayoutOutletContext>();
+  const [localQuery, setLocalQuery] = React.useState("");
+  const query = (localQuery || globalSearchQuery).trim().toLowerCase();
+
   const [tab, setTab] = React.useState<"sections" | "full">("full");
+
+  const fullTemplates = data.fullTemplates
+    .slice()
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .filter((t) => {
+      if (!query) return true;
+      const hay = [t.name, t.description, t.archived ? "archived" : "active"]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(query);
+    });
+
+  const sectionTemplates = data.sectionTemplates
+    .slice()
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .filter((t) => {
+      if (!query) return true;
+      const hay = [t.name, t.description, t.archived ? "archived" : "active"]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(query);
+    });
 
   const [open, setOpen] = React.useState(false);
   const [kind, setKind] = React.useState<"section" | "full">("full");
@@ -106,6 +135,21 @@ export default function Templates() {
         </div>
       </div>
 
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="relative w-full md:max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
+            placeholder="Search templates…"
+            className="h-10 rounded-2xl bg-white/70 pl-9"
+          />
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {tab === "full" ? fullTemplates.length : sectionTemplates.length} shown
+        </div>
+      </div>
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList className="h-11 rounded-2xl bg-white/70 p-1">
           <TabsTrigger value="full" className="rounded-2xl">
@@ -118,82 +162,79 @@ export default function Templates() {
 
         <TabsContent value="full" className="mt-4">
           <div className="grid gap-3">
-            {data.fullTemplates
-              .slice()
-              .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-              .map((t) => (
-                <div
-                  key={t.id}
-                  className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                        <Layers className="h-4 w-4" />
+            {fullTemplates.map((t) => (
+              <div
+                key={t.id}
+                className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Layers className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="truncate font-medium">
+                        <Link
+                          to={`/templates/full/${t.id}`}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {t.name}
+                        </Link>
                       </div>
-                      <div>
-                        <div className="truncate font-medium">
-                          <Link
-                            to={`/templates/full/${t.id}`}
-                            className="underline-offset-4 hover:underline"
-                          >
-                            {t.name}
-                          </Link>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {t.sectionTemplateIds.length} sections
-                          {t.description ? ` • ${t.description}` : ""}
-                        </div>
+                      <div className="text-xs text-muted-foreground">
+                        {t.sectionTemplateIds.length} sections
+                        {t.description ? ` • ${t.description}` : ""}
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {t.archived ? (
-                      <Badge className="rounded-full bg-slate-200 text-slate-900">
-                        Archived
-                      </Badge>
-                    ) : (
-                      <Badge className="rounded-full bg-primary text-primary-foreground">
-                        Active
-                      </Badge>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className="rounded-2xl bg-white"
-                      onClick={() => {
-                        const dupe = duplicateFullTemplate(t.id);
-                        if (dupe) toast({ title: "Template duplicated." });
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" /> Duplicate
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="rounded-2xl bg-white"
-                      onClick={() => updateFullTemplate(t.id, { archived: !t.archived })}
-                    >
-                      {t.archived ? "Unarchive" : "Archive"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="rounded-2xl"
-                      onClick={() => {
-                        if (!confirm(`Delete full template “${t.name}”?`)) return;
-                        deleteFullTemplate(t.id);
-                        toast({ title: "Template deleted." });
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </Button>
-                  </div>
                 </div>
-              ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  {t.archived ? (
+                    <Badge className="rounded-full bg-slate-200 text-slate-900">
+                      Archived
+                    </Badge>
+                  ) : (
+                    <Badge className="rounded-full bg-primary text-primary-foreground">
+                      Active
+                    </Badge>
+                  )}
+                  <Button
+                    variant="secondary"
+                    className="rounded-2xl bg-white"
+                    onClick={() => {
+                      const dupe = duplicateFullTemplate(t.id);
+                      if (dupe) toast({ title: "Template duplicated." });
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="rounded-2xl bg-white"
+                    onClick={() => updateFullTemplate(t.id, { archived: !t.archived })}
+                  >
+                    {t.archived ? "Unarchive" : "Archive"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="rounded-2xl"
+                    onClick={() => {
+                      if (!confirm(`Delete full template “${t.name}”?`)) return;
+                      deleteFullTemplate(t.id);
+                      toast({ title: "Template deleted." });
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
 
-            {data.fullTemplates.length === 0 ? (
+            {fullTemplates.length === 0 ? (
               <div className="rounded-3xl border border-border/70 bg-white/70 p-10 text-center">
-                <div className="text-sm font-medium">No full templates yet</div>
+                <div className="text-sm font-medium">No full templates found</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  Assemble reports by combining reusable section templates.
+                  Try a different search or create a new full template.
                 </div>
                 <Button onClick={() => openCreate("full")} className="mt-4 rounded-2xl">
                   <Plus className="mr-2 h-4 w-4" /> Create a full template
@@ -205,69 +246,66 @@ export default function Templates() {
 
         <TabsContent value="sections" className="mt-4">
           <div className="grid gap-3">
-            {data.sectionTemplates
-              .slice()
-              .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-              .map((t) => (
-                <div
-                  key={t.id}
-                  className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">
-                      <Link
-                        to={`/templates/sections/${t.id}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {t.name}
-                      </Link>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {t.blocks.length} blocks
-                      {t.description ? ` • ${t.description}` : ""}
-                    </div>
+            {sectionTemplates.map((t) => (
+              <div
+                key={t.id}
+                className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium">
+                    <Link
+                      to={`/templates/sections/${t.id}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {t.name}
+                    </Link>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {t.archived ? (
-                      <Badge className="rounded-full bg-slate-200 text-slate-900">
-                        Archived
-                      </Badge>
-                    ) : (
-                      <Badge className="rounded-full bg-primary text-primary-foreground">
-                        Active
-                      </Badge>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className="rounded-2xl bg-white"
-                      onClick={() => {
-                        const dupe = duplicateSectionTemplate(t.id);
-                        if (dupe) toast({ title: "Template duplicated." });
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" /> Duplicate
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="rounded-2xl bg-white"
-                      onClick={() => updateSectionTemplate(t.id, { archived: !t.archived })}
-                    >
-                      {t.archived ? "Unarchive" : "Archive"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="rounded-2xl"
-                      onClick={() => {
-                        if (!confirm(`Delete section template “${t.name}”?`)) return;
-                        deleteSectionTemplate(t.id);
-                        toast({ title: "Template deleted." });
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </Button>
+                  <div className="text-xs text-muted-foreground">
+                    {t.blocks.length} blocks
+                    {t.description ? ` • ${t.description}` : ""}
                   </div>
                 </div>
-              ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  {t.archived ? (
+                    <Badge className="rounded-full bg-slate-200 text-slate-900">
+                      Archived
+                    </Badge>
+                  ) : (
+                    <Badge className="rounded-full bg-primary text-primary-foreground">
+                      Active
+                    </Badge>
+                  )}
+                  <Button
+                    variant="secondary"
+                    className="rounded-2xl bg-white"
+                    onClick={() => {
+                      const dupe = duplicateSectionTemplate(t.id);
+                      if (dupe) toast({ title: "Template duplicated." });
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="rounded-2xl bg-white"
+                    onClick={() => updateSectionTemplate(t.id, { archived: !t.archived })}
+                  >
+                    {t.archived ? "Unarchive" : "Archive"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="rounded-2xl"
+                    onClick={() => {
+                      if (!confirm(`Delete section template “${t.name}”?`)) return;
+                      deleteSectionTemplate(t.id);
+                      toast({ title: "Template deleted." });
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </TabsContent>
       </Tabs>

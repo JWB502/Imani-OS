@@ -317,9 +317,12 @@ export default function Clients() {
         open={open}
         onOpenChange={(v) => {
           setOpen(v);
-          if (!v && location.pathname === "/clients/new") navigate("/clients", { replace: true });
+          if (!v && (location.pathname === "/clients/new" || searchParams.get("edit"))) {
+            navigate("/clients", { replace: true });
+          }
         }}
       >
+
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-xl">

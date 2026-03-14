@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronDown,
+  Copy,
   Download,
   FileText,
   GripVertical,
@@ -393,8 +394,14 @@ export default function ReportBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data, updateReport, deleteReport, updateReportSection, reorderReportSections } =
-    useData();
+  const {
+    data,
+    duplicateReport,
+    updateReport,
+    deleteReport,
+    updateReportSection,
+    reorderReportSections,
+  } = useData();
   const { settings } = useSettings();
 
   const report = data.reports.find((r) => r.id === id);
@@ -525,6 +532,18 @@ export default function ReportBuilder() {
             onClick={() => setAiOpen(true)}
           >
             <Sparkles className="mr-2 h-4 w-4" /> AI assist
+          </Button>
+          <Button
+            variant="secondary"
+            className="rounded-2xl bg-white/70"
+            onClick={() => {
+              const dupe = duplicateReport(report.id);
+              if (!dupe) return;
+              toast({ title: "Report duplicated." });
+              navigate(`/reports/${dupe.id}`);
+            }}
+          >
+            <Copy className="mr-2 h-4 w-4" /> Duplicate
           </Button>
           <Button
             variant="secondary"
