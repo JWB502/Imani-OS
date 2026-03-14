@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, GripVertical, Plus, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { SoftButton } from "@/components/app/SoftButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,9 +30,9 @@ export default function FullTemplateBuilder() {
     return (
       <div className="rounded-3xl border border-border/70 bg-white/70 p-8">
         <div className="text-lg font-semibold">Template not found</div>
-        <Button asChild className="mt-4 rounded-2xl">
+        <SoftButton asChild className="mt-4 rounded-2xl">
           <Link to="/templates">Back to Templates</Link>
-        </Button>
+        </SoftButton>
       </div>
     );
   }
@@ -54,19 +54,18 @@ export default function FullTemplateBuilder() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <Button
-            variant="secondary"
-            className="mb-3 rounded-2xl bg-white/70"
+          <SoftButton
+            className="mb-3 rounded-2xl"
             onClick={() => navigate("/templates")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
+          </SoftButton>
           <div className="text-sm font-medium text-muted-foreground">
             Full template builder
           </div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{template.name}</h1>
         </div>
-        <Button
+        <SoftButton
           variant="destructive"
           className="rounded-2xl"
           onClick={() => {
@@ -77,7 +76,7 @@ export default function FullTemplateBuilder() {
           }}
         >
           <Trash2 className="mr-2 h-4 w-4" /> Delete
-        </Button>
+        </SoftButton>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -160,8 +159,7 @@ export default function FullTemplateBuilder() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant="secondary"
+                    <SoftButton
                       className="rounded-2xl bg-white"
                       onClick={() =>
                         patch({
@@ -172,7 +170,7 @@ export default function FullTemplateBuilder() {
                       }
                     >
                       Remove
-                    </Button>
+                    </SoftButton>
                   </div>
                 );
               })}
@@ -185,14 +183,13 @@ export default function FullTemplateBuilder() {
                   .filter((s) => !template.sectionTemplateIds.includes(s.id))
                   .slice(0, 18)
                   .map((s) => (
-                    <Button
+                    <SoftButton
                       key={s.id}
-                      variant="secondary"
                       className="rounded-2xl bg-white"
                       onClick={() => patch({ sectionTemplateIds: [...template.sectionTemplateIds, s.id] })}
                     >
                       <Plus className="mr-2 h-4 w-4" /> {s.name}
-                    </Button>
+                    </SoftButton>
                   ))}
 
                 {availableSections.filter((s) => !template.sectionTemplateIds.includes(s.id)).length > 18 ? (

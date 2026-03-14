@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { SoftButton, SoftIconButton } from "@/components/app/SoftButton";
 import { ReportPrintView } from "@/components/reports/ReportPrintView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -600,24 +601,24 @@ export default function ReportBuilder() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="secondary"
+                  <SoftIconButton
                     size="icon"
                     className="h-9 w-9 rounded-2xl bg-white"
                     onClick={() => onReorder(idx, Math.max(0, idx - 1))}
                     aria-label="Move up"
                   >
                     <GripVertical className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
+                  </SoftIconButton>
+                  <SoftIconButton
                     size="icon"
                     className="h-9 w-9 rounded-2xl bg-white"
-                    onClick={() => onReorder(idx, Math.min(report.sections.length - 1, idx + 1))}
+                    onClick={() =>
+                      onReorder(idx, Math.min(report.sections.length - 1, idx + 1))
+                    }
                     aria-label="Move down"
                   >
                     <GripVertical className="h-4 w-4" />
-                  </Button>
+                  </SoftIconButton>
                 </div>
               </div>
             ))}
@@ -835,9 +836,8 @@ export default function ReportBuilder() {
                 )}
               </div>
               {aiMode === "rewrite" && aiOutput ? (
-                <Button
+                <SoftButton
                   type="button"
-                  variant="secondary"
                   className="mt-3 w-full rounded-2xl bg-white"
                   onClick={() => {
                     navigator.clipboard.writeText(aiOutput);
@@ -845,7 +845,7 @@ export default function ReportBuilder() {
                   }}
                 >
                   Copy output
-                </Button>
+                </SoftButton>
               ) : null}
             </div>
           </div>
@@ -886,9 +886,9 @@ function SectionEditor({
           />
         </div>
         <CollapsibleTrigger asChild>
-          <Button variant="secondary" size="icon" className="h-10 w-10 rounded-2xl bg-white" aria-label="Toggle">
+          <SoftIconButton size="icon" className="h-10 w-10 rounded-2xl" aria-label="Toggle">
             <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
-          </Button>
+          </SoftIconButton>
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent className="mt-3 space-y-3">
@@ -906,52 +906,46 @@ function SectionEditor({
         ))}
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() =>
               onChange({ blocks: [...section.blocks, buildBlock("richText")] })
             }
           >
             <Plus className="mr-2 h-4 w-4" /> Add rich text
-          </Button>
-          <Button
-            variant="secondary"
+          </SoftButton>
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() =>
               onChange({ blocks: [...section.blocks, buildBlock("checklist")] })
             }
           >
             <Plus className="mr-2 h-4 w-4" /> Add checklist
-          </Button>
-          <Button
-            variant="secondary"
+          </SoftButton>
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() => onChange({ blocks: [...section.blocks, buildBlock("kpi")] })}
           >
             <Plus className="mr-2 h-4 w-4" /> Add KPI block
-          </Button>
-          <Button
-            variant="secondary"
+          </SoftButton>
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() => onChange({ blocks: [...section.blocks, buildBlock("score")] })}
           >
             <Plus className="mr-2 h-4 w-4" /> Add score
-          </Button>
-          <Button
-            variant="secondary"
+          </SoftButton>
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() => onChange({ blocks: [...section.blocks, buildBlock("image")] })}
           >
             <Plus className="mr-2 h-4 w-4" /> Add image
-          </Button>
-          <Button
-            variant="secondary"
+          </SoftButton>
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() => onChange({ blocks: [...section.blocks, buildBlock("table")] })}
           >
             <Plus className="mr-2 h-4 w-4" /> Add table
-          </Button>
+          </SoftButton>
         </div>
 
         <div className="rounded-3xl border border-border/70 bg-white/70 p-4">

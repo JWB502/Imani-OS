@@ -1,6 +1,7 @@
 import * as React from "react";
 import { RefreshCw, Shield, Sparkles } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +126,7 @@ export default function Settings() {
           <div>
             <div className="text-sm font-medium">Page numbering</div>
             <div className="text-sm text-muted-foreground">
-              Adds “page X / Y” to the footer.
+              Adds "page X / Y" to the footer.
             </div>
           </div>
           <Switch
@@ -146,8 +147,7 @@ export default function Settings() {
               Restores sample client + template preload set.
             </div>
           </div>
-          <Button
-            variant="secondary"
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() => {
               if (!confirm("Reset all app data to the initial demo set?")) return;
@@ -156,7 +156,7 @@ export default function Settings() {
             }}
           >
             <RefreshCw className="mr-2 h-4 w-4" /> Reset
-          </Button>
+          </SoftButton>
         </CardContent>
       </Card>
 

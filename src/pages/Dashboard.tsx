@@ -1,6 +1,7 @@
 import { ArrowRight, FileText, Sparkles, TrendingUp, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +39,9 @@ export default function Dashboard() {
               New report <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="secondary" className="rounded-2xl bg-white/70">
+          <SoftButton asChild className="rounded-2xl">
             <Link to="/clients/new">Add client</Link>
-          </Button>
+          </SoftButton>
         </div>
       </div>
 
@@ -117,19 +118,19 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">What’s moving right now</CardTitle>
+            <CardTitle className="text-base">What's moving right now</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between rounded-2xl bg-white/70 p-3 ring-1 ring-border/60">
               <div>
                 <div className="text-sm font-medium">Draft reports</div>
                 <div className="text-xs text-muted-foreground">
-                  Push these to “Complete” to lock the PDF.
+                  Push these to "Complete" to lock the PDF.
                 </div>
               </div>
-              <Button asChild variant="secondary" className="rounded-2xl bg-white">
+              <SoftButton asChild className="rounded-2xl bg-white">
                 <Link to="/reports">Review</Link>
-              </Button>
+              </SoftButton>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-[color:var(--im-navy)] p-3 text-white ring-1 ring-white/10">
               <div>
@@ -150,21 +151,21 @@ export default function Dashboard() {
             <CardTitle className="text-base">Quick links</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
-            <Button asChild variant="secondary" className="h-11 justify-between rounded-2xl bg-white/70">
+            <SoftButton asChild className="h-11 justify-between rounded-2xl">
               <Link to="/impact">
                 Agency Impact Dashboard <ArrowRight className="h-4 w-4" />
               </Link>
-            </Button>
-            <Button asChild variant="secondary" className="h-11 justify-between rounded-2xl bg-white/70">
+            </SoftButton>
+            <SoftButton asChild className="h-11 justify-between rounded-2xl">
               <Link to="/wins">
                 Wins Library <ArrowRight className="h-4 w-4" />
               </Link>
-            </Button>
-            <Button asChild variant="secondary" className="h-11 justify-between rounded-2xl bg-white/70">
+            </SoftButton>
+            <SoftButton asChild className="h-11 justify-between rounded-2xl">
               <Link to="/roi">
                 ROI Tracking <ArrowRight className="h-4 w-4" />
               </Link>
-            </Button>
+            </SoftButton>
           </CardContent>
         </Card>
       </div>

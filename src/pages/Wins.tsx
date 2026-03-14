@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { Plus, Search, Sparkles, Trash2 } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -254,13 +255,12 @@ export default function Wins() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
+                <SoftButton
                   className="rounded-2xl bg-white"
                   onClick={() => updateWin(w.id, { caseStudyPotential: !w.caseStudyPotential })}
                 >
                   {w.caseStudyPotential ? "Unmark case study" : "Mark case study"}
-                </Button>
+                </SoftButton>
                 <Button
                   variant="destructive"
                   className="rounded-2xl"

@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2 } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,11 +132,11 @@ export default function ClientDetail() {
               <FilePlus2 className="mr-2 h-4 w-4" /> New report
             </Link>
           </Button>
-          <Button asChild variant="secondary" className="rounded-2xl bg-white/70">
+          <SoftButton asChild className="rounded-2xl">
             <Link to={`/clients?edit=${client.id}`}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </Link>
-          </Button>
+          </SoftButton>
 
           <Button
             variant="destructive"
@@ -327,11 +328,11 @@ export default function ClientDetail() {
                   Monthly metrics + narrative notes.
                 </div>
               </div>
-              <Button asChild variant="secondary" className="rounded-2xl bg-white">
+              <SoftButton asChild className="rounded-2xl bg-white">
                 <Link to={`/roi?clientId=${client.id}`}>
                   <TrendingUp className="mr-2 h-4 w-4" /> Open ROI dashboard
                 </Link>
-              </Button>
+              </SoftButton>
             </div>
           </div>
         </TabsContent>

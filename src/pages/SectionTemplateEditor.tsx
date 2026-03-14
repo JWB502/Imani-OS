@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
+import { SoftButton, SoftIconButton } from "@/components/app/SoftButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,8 +112,7 @@ function BlockEditor({
                 }}
                 className="h-10 rounded-2xl bg-white/70"
               />
-              <Button
-                variant="secondary"
+              <SoftIconButton
                 size="icon"
                 className="h-10 w-10 rounded-2xl bg-white"
                 onClick={() =>
@@ -124,11 +124,10 @@ function BlockEditor({
                 aria-label="Remove checklist item"
               >
                 <Trash2 className="h-4 w-4" />
-              </Button>
+              </SoftIconButton>
             </div>
           ))}
-          <Button
-            variant="secondary"
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() =>
               onChange({
@@ -141,7 +140,7 @@ function BlockEditor({
             }
           >
             <Plus className="mr-2 h-4 w-4" /> Add item
-          </Button>
+          </SoftButton>
         </div>
       ) : null}
 
@@ -198,8 +197,7 @@ function BlockEditor({
                 className="col-span-5 h-10 rounded-2xl bg-white/70"
                 placeholder="Default"
               />
-              <Button
-                variant="secondary"
+              <SoftIconButton
                 size="icon"
                 className="col-span-1 h-10 w-10 rounded-2xl bg-white"
                 onClick={() =>
@@ -211,11 +209,10 @@ function BlockEditor({
                 aria-label="Remove KPI"
               >
                 <Trash2 className="h-4 w-4" />
-              </Button>
+              </SoftIconButton>
             </div>
           ))}
-          <Button
-            variant="secondary"
+          <SoftButton
             className="rounded-2xl bg-white"
             onClick={() =>
               onChange({
@@ -228,7 +225,7 @@ function BlockEditor({
             }
           >
             <Plus className="mr-2 h-4 w-4" /> Add KPI
-          </Button>
+          </SoftButton>
         </div>
       ) : null}
 
@@ -315,13 +312,12 @@ export default function SectionTemplateEditor() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <Button
-            variant="secondary"
-            className="mb-3 rounded-2xl bg-white/70"
+          <SoftButton
+            className="mb-3 rounded-2xl"
             onClick={() => navigate("/templates")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
+          </SoftButton>
           <div className="text-sm font-medium text-muted-foreground">
             Section template editor
           </div>
@@ -331,7 +327,7 @@ export default function SectionTemplateEditor() {
           variant="destructive"
           className="rounded-2xl"
           onClick={() => {
-            if (!confirm(`Delete section template “${template.name}”?`)) return;
+            if (!confirm(`Delete section template "${template.name}"?`)) return;
             deleteSectionTemplate(template.id);
             toast({ title: "Template deleted." });
             navigate("/templates");
@@ -401,14 +397,13 @@ export default function SectionTemplateEditor() {
                 "image",
                 "table",
               ] as const).map((t) => (
-                <Button
+                <SoftButton
                   key={t}
-                  variant="secondary"
                   className="rounded-2xl bg-white"
                   onClick={() => patch({ blocks: [...template.blocks, buildBlock(t)] })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Add {t}
-                </Button>
+                </SoftButton>
               ))}
             </div>
 

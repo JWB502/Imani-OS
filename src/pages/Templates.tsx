@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { Copy, Layers, Plus, Search, Trash2 } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,8 +199,7 @@ export default function Templates() {
                       Active
                     </Badge>
                   )}
-                  <Button
-                    variant="secondary"
+                  <SoftButton
                     className="rounded-2xl bg-white"
                     onClick={() => {
                       const dupe = duplicateFullTemplate(t.id);
@@ -207,14 +207,13 @@ export default function Templates() {
                     }}
                   >
                     <Copy className="mr-2 h-4 w-4" /> Duplicate
-                  </Button>
-                  <Button
-                    variant="secondary"
+                  </SoftButton>
+                  <SoftButton
                     className="rounded-2xl bg-white"
                     onClick={() => updateFullTemplate(t.id, { archived: !t.archived })}
                   >
                     {t.archived ? "Unarchive" : "Archive"}
-                  </Button>
+                  </SoftButton>
                   <Button
                     variant="destructive"
                     className="rounded-2xl"
@@ -275,8 +274,7 @@ export default function Templates() {
                       Active
                     </Badge>
                   )}
-                  <Button
-                    variant="secondary"
+                  <SoftButton
                     className="rounded-2xl bg-white"
                     onClick={() => {
                       const dupe = duplicateSectionTemplate(t.id);
@@ -284,14 +282,13 @@ export default function Templates() {
                     }}
                   >
                     <Copy className="mr-2 h-4 w-4" /> Duplicate
-                  </Button>
-                  <Button
-                    variant="secondary"
+                  </SoftButton>
+                  <SoftButton
                     className="rounded-2xl bg-white"
                     onClick={() => updateSectionTemplate(t.id, { archived: !t.archived })}
                   >
                     {t.archived ? "Unarchive" : "Archive"}
-                  </Button>
+                  </SoftButton>
                   <Button
                     variant="destructive"
                     className="rounded-2xl"

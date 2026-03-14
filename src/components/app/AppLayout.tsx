@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/AppSidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SoftIconButton } from "@/components/app/SoftButton";
 
 export function AppLayout() {
   const [query, setQuery] = React.useState("");
@@ -26,14 +27,13 @@ export function AppLayout() {
                 className="h-10 rounded-2xl border-border/70 bg-white/70 pl-9 shadow-sm focus-visible:ring-primary/30"
               />
             </div>
-            <Button
-              variant="secondary"
+            <SoftIconButton
               size="icon"
-              className="h-10 w-10 rounded-2xl bg-white/70 shadow-sm"
+              className="h-10 w-10 rounded-2xl"
               aria-label="Notifications"
             >
               <Bell className="h-4 w-4" />
-            </Button>
+            </SoftIconButton>
           </div>
           <div className="px-4 pb-3 text-xs text-muted-foreground md:px-6">
             Tip: Use <span className="font-medium">Ctrl/Cmd + B</span> to toggle the sidebar.

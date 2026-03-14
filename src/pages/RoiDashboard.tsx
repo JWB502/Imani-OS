@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import type { MetricDefinition } from "@/types/imani";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { SoftButton } from "@/components/app/SoftButton";
 
 function metricLabel(md: MetricDefinition) {
   if (md.kind === "currency") return `${md.name} ($)`;
@@ -335,8 +336,7 @@ export default function RoiDashboard() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
+                <SoftButton
                   className="rounded-2xl bg-white"
                   onClick={() => {
                     const nextKind =
@@ -350,12 +350,12 @@ export default function RoiDashboard() {
                   }}
                 >
                   Cycle kind
-                </Button>
+                </SoftButton>
                 <Button
                   variant="destructive"
                   className="rounded-2xl"
                   onClick={() => {
-                    if (!confirm(`Delete KPI “${md.name}”?`)) return;
+                    if (!confirm(`Delete KPI "${md.name}"?`)) return;
                     deleteMetricDefinition(md.id);
                     toast({ title: "KPI deleted." });
                   }}

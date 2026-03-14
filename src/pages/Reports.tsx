@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { Copy, FileText, Plus, Trash2 } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,15 +177,10 @@ export default function Reports() {
                 <TableCell className="hidden lg:table-cell">{r.analyst ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button
-                      asChild
-                      variant="secondary"
-                      className="h-9 rounded-2xl bg-white"
-                    >
+                    <SoftButton asChild className="h-9 rounded-2xl bg-white">
                       <Link to={`/reports/${r.id}`}>Open</Link>
-                    </Button>
-                    <Button
-                      variant="secondary"
+                    </SoftButton>
+                    <SoftButton
                       className="h-9 rounded-2xl bg-white"
                       onClick={() => {
                         const dupe = duplicateReport(r.id);
@@ -194,7 +190,7 @@ export default function Reports() {
                       }}
                     >
                       <Copy className="mr-2 h-4 w-4" /> Duplicate
-                    </Button>
+                    </SoftButton>
                     <Button
                       variant="destructive"
                       className="h-9 rounded-2xl"

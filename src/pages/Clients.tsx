@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { Plus, Search, Trash2 } from "lucide-react";
 
+import { SoftButton } from "@/components/app/SoftButton";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -273,13 +274,12 @@ export default function Clients() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button
-                      variant="secondary"
+                    <SoftButton
                       className="h-9 rounded-2xl bg-white"
                       onClick={() => openEdit(c)}
                     >
                       Edit
-                    </Button>
+                    </SoftButton>
                     <Button
                       variant="destructive"
                       className="h-9 rounded-2xl"
