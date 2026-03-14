@@ -243,7 +243,7 @@ export function createSeedData(): AppData {
         ]),
         rich(
           "Narrative",
-          "Explain what moved, why it matters, and what we’ll do next.",
+          "Explain what moved, why it matters, and what we'll do next.",
         ),
       ],
       archived: false,
@@ -386,6 +386,7 @@ export function createSeedData(): AppData {
       },
     ],
     wins: [],
+    campaigns: [],
     sectionTemplates,
     fullTemplates,
     reports: [],

@@ -179,6 +179,27 @@ export type MonthlyMetric = {
   updatedAt: string;
 };
 
+export type CampaignResult = { id: ID; name: string; value: number; unit?: string };
+
+export type ManagementType = "DIY" | "DWY" | "DFY";
+
+export type Campaign = {
+  id: ID;
+  clientId: ID;
+  title?: string;
+  channel: string;
+  managementType: ManagementType;
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+  budget?: number;
+  adSpend?: number;
+  income?: number;
+  results: CampaignResult[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AppSettings = {
   agencyName: string;
   openAiApiKey?: string;
@@ -190,6 +211,7 @@ export type AppSettings = {
 export type AppData = {
   clients: Client[];
   wins: Win[];
+  campaigns: Campaign[];
   sectionTemplates: SectionTemplate[];
   fullTemplates: FullTemplate[];
   reports: Report[];

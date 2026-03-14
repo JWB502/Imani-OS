@@ -1,6 +1,7 @@
 import * as React from "react";
 import type {
   AppData,
+  Campaign,
   Client,
   FullTemplate,
   MetricDefinition,
@@ -61,6 +62,13 @@ type DataContextValue = {
   createClient: (patch: Omit<Client, "id" | "createdAt" | "updatedAt">) => Client;
   updateClient: (id: string, patch: Partial<Client>) => void;
   deleteClient: (id: string) => void;
+
+  // Campaigns
+  createCampaign: (
+    patch: Omit<Campaign, "id" | "createdAt" | "updatedAt">
+  ) => Campaign;
+  updateCampaign: (id: string, patch: Partial<Campaign>) => void;
+  deleteCampaign: (id: string) => void;
 
   // Wins
   createWin: (patch: Omit<Win, "id" | "createdAt" | "updatedAt">) => Win;
@@ -124,7 +132,12 @@ const DataContext = React.createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = React.useState<AppData>(() => {
-    return readJson<AppData>(DATA_KEY) ?? createSeedData();
+    const raw = readJson<any>(DATA_KEY);
+    if (!raw) return createSeedData();
+    return {
+      ...raw,
+      campaigns: Array.isArray(raw.campaigns) ? raw.campaigns : [],
+    } as AppData;
   });
 
   const persist = React.useCallback((next: AppData) => {
@@ -293,10 +306,50 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       persist({
         ...data,
         clients: data.clients.filter((c) => c.id !== id),
+        campaigns: data.campaigns.filter((c) => c.clientId !== id),
         reports: data.reports.filter((r) => r.clientId !== id),
         wins: data.wins.filter((w) => w.clientId !== id),
         metricDefinitions: data.metricDefinitions.filter((m) => m.clientId !== id),
         monthlyMetrics: data.monthlyMetrics.filter((mm) => mm.clientId !== id),
+      });
+    },
+    [data, persist],
+  );
+
+  // Campaigns
+  const createCampaign = React.useCallback(
+    (patch: Omit<Campaign, "id" | "createdAt" | "updatedAt">) => {
+      const createdAt = nowIso();
+      const campaign: Campaign = {
+        id: createId("cmp"),
+        createdAt,
+        updatedAt: createdAt,
+        results: patch.results ?? [],
+        ...patch,
+      };
+      persist({ ...data, campaigns: [campaign, ...(data.campaigns ?? [])] });
+      return campaign;
+    },
+    [data, persist],
+  );
+
+  const updateCampaign = React.useCallback(
+    (id: string, patch: Partial<Campaign>) => {
+      persist({
+        ...data,
+        campaigns: (data.campaigns ?? []).map((c) =>
+          c.id === id ? { ...c, ...patch, id: c.id, updatedAt: nowIso() } : c,
+        ),
+      });
+    },
+    [data, persist],
+  );
+
+  const deleteCampaign = React.useCallback(
+    (id: string) => {
+      persist({
+        ...data,
+        campaigns: (data.campaigns ?? []).filter((c) => c.id !== id),
       });
     },
     [data, persist],
@@ -387,6 +440,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         fullTemplates: data.fullTemplates.map((ft) => ({
           ...ft,
           sectionTemplateIds: ft.sectionTemplateIds.filter((sid) => sid !== id),
+          updatedAt: nowIso(),
         })),
       });
     },
@@ -816,6 +870,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         createClient,
         updateClient,
         deleteClient,
+        createCampaign,
+        updateCampaign,
+        deleteCampaign,
         createWin,
         updateWin,
         deleteWin,

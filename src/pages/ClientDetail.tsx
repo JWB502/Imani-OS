@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2 } from "lucide-react";
 
+import { CampaignsTab } from "@/components/campaigns/CampaignsTab";
 import { SoftButton } from "@/components/app/SoftButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -145,7 +146,7 @@ export default function ClientDetail() {
             variant="destructive"
             className="rounded-2xl"
             onClick={() => {
-              if (!confirm(`Delete ${client.name}? This also removes reports, ROI, and wins.`)) return;
+              if (!confirm(`Delete ${client.name}? This also removes reports, ROI, wins, and campaigns.`)) return;
               deleteClient(client.id);
               navigate("/clients");
             }}
@@ -279,6 +280,9 @@ export default function ClientDetail() {
           <TabsTrigger value="reports" className="rounded-2xl">
             Reports
           </TabsTrigger>
+          <TabsTrigger value="campaigns" className="rounded-2xl">
+            Campaigns
+          </TabsTrigger>
           <TabsTrigger value="roi" className="rounded-2xl">
             ROI
           </TabsTrigger>
@@ -338,6 +342,10 @@ export default function ClientDetail() {
                 ))
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="mt-4">
+          <CampaignsTab clientId={client.id} />
         </TabsContent>
 
         <TabsContent value="roi" className="mt-4">
