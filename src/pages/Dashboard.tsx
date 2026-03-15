@@ -4,8 +4,26 @@ import { Link } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useData } from "@/contexts/DataContext";
 
 export default function Dashboard() {
+  const { data } = useData();
+
+  const activeClients = React.useMemo(
+    () => data.clients.filter((c) => c.status === "Active").length,
+    [data.clients],
+  );
+
+  const draftedReports = React.useMemo(
+    () => data.reports.filter((r) => r.status === "Draft").length,
+    [data.reports],
+  );
+
+  const campaignWins = React.useMemo(
+    () => data.wins.length,
+    [data.wins],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -22,8 +40,10 @@ export default function Dashboard() {
             <Sparkles className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold">12</div>
-            <p className="text-xs text-muted-foreground">+2 this month</p>
+            <div className="text-3xl font-semibold">{activeClients}</div>
+            <p className="text-xs text-muted-foreground">
+              Showing clients with status set to Active.
+            </p>
           </CardContent>
         </Card>
 
@@ -33,8 +53,10 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-[color:var(--im-secondary)]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold">34</div>
-            <p className="text-xs text-muted-foreground">+6 in the last 7 days</p>
+            <div className="text-3xl font-semibold">{draftedReports}</div>
+            <p className="text-xs text-muted-foreground">
+              Reports currently in Draft status.
+            </p>
           </CardContent>
         </Card>
 
@@ -44,8 +66,10 @@ export default function Dashboard() {
             <Sparkles className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold">7</div>
-            <p className="text-xs text-muted-foreground">3 this quarter</p>
+            <div className="text-3xl font-semibold">{campaignWins}</div>
+            <p className="text-xs text-muted-foreground">
+              Total wins logged across all clients.
+            </p>
           </CardContent>
         </Card>
       </div>
