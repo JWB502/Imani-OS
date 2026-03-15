@@ -1,5 +1,3 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 fn main() {
-  imani_os::run();
+    tauri_build::build()
 }
