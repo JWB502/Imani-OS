@@ -1,4 +1,3 @@
-in JSX, keep ROI features, chart, and bulk tools working.">
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
@@ -167,7 +166,7 @@ export default function RoiDashboard() {
 
   // Overall ROI across all months for this client
   const overallRoi = React.useMemo(() => {
-    if (!revenueMd || !expensesMd) return { roi: undefined, months: 0 };
+    if (!revenueMd || !expensesMd) return { roi: undefined as number | undefined, months: 0 };
     let sum = 0;
     let count = 0;
     for (const mm of months) {
@@ -423,7 +422,7 @@ export default function RoiDashboard() {
           <CardHeader>
             <CardTitle className="text-base">Overall ROI (client)</CardTitle>
             <div className="text-sm text-muted-foreground">
-              Average monthly ROI across all months with Revenue & Service Expenses.
+              Average monthly ROI across all months with Revenue &amp; Service Expenses.
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -441,7 +440,7 @@ export default function RoiDashboard() {
                 {overallRoi.months} month{overallRoi.months === 1 ? "" : "s"}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
-                Only months with both Revenue and Service Expenses > 0 are included.
+                Only months with both Revenue and Service Expenses &gt; 0 are included.
               </div>
             </div>
           </CardContent>
@@ -470,7 +469,7 @@ export default function RoiDashboard() {
         </Card>
       </div>
 
-      {/* (Trend chart, this-month editor, KPI definitions and dialogs can follow here, unchanged.) */}
+      {/* You can keep the rest of the trend chart, this-month editor, KPI definitions, and dialogs below as needed */}
     </div>
   );
 }
