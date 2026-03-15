@@ -13,14 +13,16 @@ permissions:
 
 jobs:
   build:
-    name: Build & Publish (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build & Publish (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-14
-          - windows-latest
+        include:
+          - platform: macos-latest
+            args: ""
+          - platform: windows-latest
+            args: ""
 
     steps:
       - name: Checkout
@@ -38,16 +40,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build & Publish
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          projectPath: .
-          tauriScript: npm run tauri
           tagName: v${{ inputs.version }}
           releaseName: Imani OS v${{ inputs.version }}
           releaseBody: Automated release for v${{ inputs.version }}.
           prerelease: false
-          includeUpdaterJson: true
+          args: ${{ matrix.args }}
