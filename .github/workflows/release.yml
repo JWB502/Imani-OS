@@ -54,7 +54,8 @@ jobs:
           releaseName: Imani OS v${{ inputs.version }}
           releaseBody: Automated release for v${{ inputs.version }}.
           prerelease: false
-          uploadUpdaterJson: false
+          includeUpdaterJson: false
+          tauriScript: "npx tauri"
           args: ${{ matrix.args }}
 
       - name: Upload updater artifacts (for latest.json)
