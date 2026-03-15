@@ -49,13 +49,20 @@ function statusBadge(status: ClientStatus) {
   }
 }
 
-type ClientDraft = Omit<Client, "id" | "createdAt" | "updatedAt">;
+// Local draft type extends Client with UI-only fields.
+type ClientDraft = Omit<Client, "id" | "createdAt" | "updatedAt"> & {
+  /** Local-only numeric input for total service expenses used to auto-calc lifetime value */
+  serviceExpensesTotal?: number;
+  /** Whether this client is included in retention metrics (UI-only for now) */
+  includeInRetention?: boolean;
+};
 
 const emptyDraft: ClientDraft = {
   name: "",
   status: "Lead",
   tags: [],
   serviceTypes: [],
+  includeInRetention: true,
 };
 
 function toCsvArray(v: string) {
@@ -147,6 +154,9 @@ export default function Clients() {
       oneTimeProjectValue: client.oneTimeProjectValue,
       totalLifetimeValue: client.totalLifetimeValue,
       internalContext: client.internalContext,
+      // Existing clients default to being included in retention
+      includeInRetention: true,
+      serviceExpensesTotal: client.totalLifetimeValue,
     });
     setOpen(true);
   }
@@ -157,21 +167,25 @@ export default function Clients() {
       return;
     }
 
+    // Auto-calc totalLifetimeValue from service expenses if provided
+    const computedLifetime =
+      draft.serviceExpensesTotal !== undefined
+        ? draft.serviceExpensesTotal
+        : draft.totalLifetimeValue;
+
+    const payload = {
+      ...draft,
+      name: draft.name.trim(),
+      tags: draft.tags,
+      serviceTypes: draft.serviceTypes,
+      totalLifetimeValue: computedLifetime,
+    };
+
     if (editing) {
-      updateClient(editing.id, {
-        ...draft,
-        name: draft.name.trim(),
-        tags: draft.tags,
-        serviceTypes: draft.serviceTypes,
-      });
+      updateClient(editing.id, payload);
       toast({ title: "Client updated." });
     } else {
-      const created = createClient({
-        ...draft,
-        name: draft.name.trim(),
-        tags: draft.tags,
-        serviceTypes: draft.serviceTypes,
-      });
+      const created = createClient(payload);
       toast({ title: "Client created." });
       navigate(`/clients/${created.id}`);
     }
@@ -321,7 +335,6 @@ export default function Clients() {
           }
         }}
       >
-
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-xl">
@@ -408,6 +421,35 @@ export default function Clients() {
             </div>
 
             <div className="grid gap-2">
+              <Label>Start date</Label>
+              <Input
+                type="date"
+                value={draft.startDate ?? ""}
+                onChange={(e) =>
+                  setDraft((p) => ({
+                    ...p,
+                    startDate: e.target.value || undefined,
+                  }))
+                }
+                className="h-11 rounded-2xl"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>End date</Label>
+              <Input
+                type="date"
+                value={draft.endDate ?? ""}
+                onChange={(e) =>
+                  setDraft((p) => ({
+                    ...p,
+                    endDate: e.target.value || undefined,
+                  }))
+                }
+                className="h-11 rounded-2xl"
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label>Monthly retainer</Label>
               <Input
                 value={draft.monthlyRetainer ?? ""}
@@ -424,20 +466,41 @@ export default function Clients() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Total lifetime value</Label>
+              <Label>Service expenses (total)</Label>
               <Input
-                value={draft.totalLifetimeValue ?? ""}
+                value={draft.serviceExpensesTotal ?? ""}
                 onChange={(e) =>
                   setDraft((p) => ({
                     ...p,
-                    totalLifetimeValue: e.target.value
+                    serviceExpensesTotal: e.target.value
                       ? Number(e.target.value)
                       : undefined,
                   }))
                 }
                 className="h-11 rounded-2xl"
                 inputMode="numeric"
+                placeholder="Total value of services for this client"
               />
+            </div>
+
+            <div className="grid gap-1 md:col-span-2">
+              <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3">
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Total lifetime value
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Automatically calculated from service expenses.
+                  </div>
+                </div>
+                <div className="text-right text-lg font-semibold">
+                  {draft.serviceExpensesTotal !== undefined
+                    ? formatCurrency(draft.serviceExpensesTotal)
+                    : draft.totalLifetimeValue !== undefined
+                    ? formatCurrency(draft.totalLifetimeValue)
+                    : "—"}
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-2 md:col-span-2">
@@ -487,6 +550,42 @@ export default function Clients() {
                 className="min-h-24 rounded-2xl"
                 placeholder="Internal context notes (what the team should remember)…"
               />
+            </div>
+
+            <div className="md:col-span-2 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
+              <div className="space-y-0.5">
+                <div className="text-sm font-medium">Include in retention metrics</div>
+                <p className="text-xs text-muted-foreground">
+                  Turn this off for one-off projects that shouldn&apos;t affect retention.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setDraft((p) => ({
+                    ...p,
+                    includeInRetention:
+                      p.includeInRetention === false
+                        ? true
+                        : !p.includeInRetention
+                        ? true
+                        : false,
+                  }))
+                }
+                className={cn(
+                  "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
+                  draft.includeInRetention !== false
+                    ? "bg-[color:var(--im-secondary)] border-[color:var(--im-secondary)]"
+                    : "bg-muted border-border",
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                    draft.includeInRetention !== false ? "translate-x-6" : "translate-x-1",
+                  )}
+                />
+              </button>
             </div>
           </div>
 
