@@ -112,8 +112,10 @@ export default function RoiDashboard() {
 
   const expensesMd =
     metricDefs.find(
-      (m) => m.isStandard &&
-        (normalizeName(m.name) === "service expenses" || normalizeName(m.name) === "service expense"),
+      (m) =>
+        m.isStandard &&
+        (normalizeName(m.name) === "service expenses" ||
+          normalizeName(m.name) === "service expense"),
     ) ??
     metricDefs.find(
       (m) =>
@@ -121,9 +123,13 @@ export default function RoiDashboard() {
         normalizeName(m.name) === "service expense",
     );
 
-  const standardIds = new Set([revenueMd?.id, expensesMd?.id].filter(Boolean) as string[]);
+  const standardIds = new Set(
+    [revenueMd?.id, expensesMd?.id].filter(Boolean) as string[],
+  );
 
-  const standardMetricDefs = [revenueMd, expensesMd].filter(Boolean) as MetricDefinition[];
+  const standardMetricDefs = [revenueMd, expensesMd].filter(
+    Boolean,
+  ) as MetricDefinition[];
   const customMetricDefs = metricDefs.filter((m) => !standardIds.has(m.id));
 
   const months = data.monthlyMetrics
@@ -131,7 +137,9 @@ export default function RoiDashboard() {
     .slice()
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  const latestMonth = months[months.length - 1]?.month ?? new Date().toISOString().slice(0, 7);
+  const latestMonth =
+    months[months.length - 1]?.month ??
+    new Date().toISOString().slice(0, 7);
   const [activeMonth, setActiveMonth] = React.useState(latestMonth);
 
   React.useEffect(() => {
@@ -143,10 +151,16 @@ export default function RoiDashboard() {
   const effectiveIncludeInAgencyImpact =
     monthEntry?.includeInAgencyImpact ?? client?.includeInAgencyImpact ?? true;
 
-  const monthRevenue = revenueMd ? monthEntry?.values[revenueMd.id] : undefined;
-  const monthExpenses = expensesMd ? monthEntry?.values[expensesMd.id] : undefined;
+  const monthRevenue = revenueMd
+    ? monthEntry?.values[revenueMd.id]
+    : undefined;
+  const monthExpenses = expensesMd
+    ? monthEntry?.values[expensesMd.id]
+    : undefined;
 
-  const [metricForChart, setMetricForChart] = React.useState(metricDefs[0]?.id ?? "");
+  const [metricForChart, setMetricForChart] = React.useState(
+    metricDefs[0]?.id ?? "",
+  );
   React.useEffect(() => {
     setMetricForChart((prev) => prev || metricDefs[0]?.id || "");
   }, [metricDefs]);
@@ -161,13 +175,16 @@ export default function RoiDashboard() {
   const last = chartData[chartData.length - 1]?.value;
   const prev = chartData[chartData.length - 2]?.value;
   const diff =
-    last === undefined || prev === undefined ? undefined : Math.round((last - prev) * 100) / 100;
+    last === undefined || prev === undefined
+      ? undefined
+      : Math.round((last - prev) * 100) / 100;
 
   const [openMetric, setOpenMetric] = React.useState(false);
   const [openBulk, setOpenBulk] = React.useState(false);
 
   const [newMetricName, setNewMetricName] = React.useState("");
-  const [newMetricKind, setNewMetricKind] = React.useState<MetricDefinition["kind"]>("number");
+  const [newMetricKind, setNewMetricKind] =
+    React.useState<MetricDefinition["kind"]>("number");
   const [newMetricUnit, setNewMetricUnit] = React.useState("");
 
   if (!client) {
@@ -198,8 +215,12 @@ export default function RoiDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-sm font-medium text-muted-foreground">Month-to-month ROI tracking</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">ROI Dashboard</h1>
+          <div className="text-sm font-medium text-muted-foreground">
+            Month-to-month ROI tracking
+          </div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+            ROI Dashboard
+          </h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -217,14 +238,18 @@ export default function RoiDashboard() {
           </Select>
 
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => setOpenBulk(true)}
-            className="h-11 rounded-2xl bg-white/70 ring-1 ring-border/60 hover:bg-white"
+            className="h-11 rounded-2xl border-[color:var(--im-secondary)]/40 bg-[color:var(--im-secondary)]/8 px-3 text-sm font-medium text-[color:var(--im-secondary)] shadow-sm transition-colors hover:border-[color:var(--im-secondary)] hover:bg-[color:var(--im-secondary)]/14"
           >
-            <CalendarPlus className="mr-2 h-4 w-4 text-[color:var(--im-secondary)]" /> Bulk add months
+            <CalendarPlus className="mr-2 h-4 w-4" />
+            Bulk add months
           </Button>
 
-          <Button onClick={() => setOpenMetric(true)} className="h-11 rounded-2xl">
+          <Button
+            onClick={() => setOpenMetric(true)}
+            className="h-11 rounded-2xl"
+          >
             <Plus className="mr-2 h-4 w-4" /> Add KPI
           </Button>
         </div>
@@ -268,8 +293,8 @@ export default function RoiDashboard() {
                   {diff === undefined
                     ? "—"
                     : chartMetric?.kind === "currency"
-                      ? formatCurrency(diff)
-                      : formatNumber(diff)}
+                    ? formatCurrency(diff)
+                    : formatNumber(diff)}
                 </div>
               </div>
               <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
@@ -285,7 +310,10 @@ export default function RoiDashboard() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, left: 8, right: 18, bottom: 0 }}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 10, left: 8, right: 18, bottom: 0 }}
+                  >
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
@@ -327,7 +355,9 @@ export default function RoiDashboard() {
 
             <div className="space-y-2">
               <div className="rounded-3xl bg-white/70 p-4 ring-1 ring-border/60">
-                <div className="text-sm font-semibold text-[color:var(--im-navy)]">Standard KPIs</div>
+                <div className="text-sm font-semibold text-[color:var(--im-navy)]">
+                  Standard KPIs
+                </div>
                 <div className="mt-3 space-y-2">
                   {standardMetricDefs.map((md) => {
                     const raw = monthEntry?.values[md.id];
@@ -335,15 +365,20 @@ export default function RoiDashboard() {
                       <div key={md.id} className="grid grid-cols-12 gap-2">
                         <div className="col-span-7">
                           <div className="flex items-center gap-2 text-sm font-medium">
-                            <Lock className="h-4 w-4 text-muted-foreground" /> {md.name}
+                            <Lock className="h-4 w-4 text-muted-foreground" />{" "}
+                            {md.name}
                           </div>
-                          <div className="text-xs text-muted-foreground">Currency</div>
+                          <div className="text-xs text-muted-foreground">
+                            Currency
+                          </div>
                         </div>
                         <Input
                           className="col-span-5 h-11 rounded-2xl bg-white/70"
                           inputMode="decimal"
                           value={raw ?? ""}
-                          onChange={(e) => setMetricValue(md.id, e.target.value)}
+                          onChange={(e) =>
+                            setMetricValue(md.id, e.target.value)
+                          }
                         />
                       </div>
                     );
@@ -351,7 +386,10 @@ export default function RoiDashboard() {
                 </div>
 
                 <div className="mt-3 grid gap-2">
-                  <RoiSummary revenue={monthRevenue} expenses={monthExpenses} />
+                  <RoiSummary
+                    revenue={monthRevenue}
+                    expenses={monthExpenses}
+                  />
                   <ImpactToggle
                     checked={effectiveIncludeInAgencyImpact}
                     onCheckedChange={(checked) => {
@@ -375,21 +413,29 @@ export default function RoiDashboard() {
                 </div>
               ) : (
                 <div className="rounded-3xl bg-white/70 p-4 ring-1 ring-border/60">
-                  <div className="text-sm font-semibold text-[color:var(--im-navy)]">Custom KPIs</div>
+                  <div className="text-sm font-semibold text-[color:var(--im-navy)]">
+                    Custom KPIs
+                  </div>
                   <div className="mt-3 space-y-2">
                     {customMetricDefs.map((md) => {
                       const raw = monthEntry?.values[md.id];
                       return (
                         <div key={md.id} className="grid grid-cols-12 gap-2">
                           <div className="col-span-7">
-                            <div className="text-sm font-medium">{md.name}</div>
-                            <div className="text-xs text-muted-foreground">{md.kind}</div>
+                            <div className="text-sm font-medium">
+                              {md.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {md.kind}
+                            </div>
                           </div>
                           <Input
                             className="col-span-5 h-11 rounded-2xl bg-white/70"
                             inputMode="decimal"
                             value={raw ?? ""}
-                            onChange={(e) => setMetricValue(md.id, e.target.value)}
+                            onChange={(e) =>
+                              setMetricValue(md.id, e.target.value)
+                            }
                           />
                         </div>
                       );
@@ -443,9 +489,14 @@ export default function RoiDashboard() {
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="text-base">KPI definitions</CardTitle>
-            <div className="text-sm text-muted-foreground">Standard + custom per client</div>
+            <div className="text-sm text-muted-foreground">
+              Standard + custom per client
+            </div>
           </div>
-          <Button onClick={() => setOpenMetric(true)} className="rounded-2xl">
+          <Button
+            onClick={() => setOpenMetric(true)}
+            className="rounded-2xl"
+          >
             <TrendingUp className="mr-2 h-4 w-4" /> Add KPI
           </Button>
         </CardHeader>
@@ -457,7 +508,9 @@ export default function RoiDashboard() {
             >
               <div>
                 <div className="flex items-center gap-2 font-medium">
-                  {md.locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : null}
+                  {md.locked ? (
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  ) : null}
                   {md.name}
                   {md.locked ? (
                     <Badge className="ml-2 rounded-full bg-primary/10 text-primary">
@@ -479,8 +532,8 @@ export default function RoiDashboard() {
                       md.kind === "number"
                         ? "currency"
                         : md.kind === "currency"
-                          ? "percent"
-                          : "number";
+                        ? "percent"
+                        : "number";
                     updateMetricDefinition(md.id, { kind: nextKind });
                     toast({ title: "Metric updated." });
                   }}
@@ -507,7 +560,8 @@ export default function RoiDashboard() {
             <div className="rounded-3xl border border-dashed border-border/70 bg-white/70 p-10 text-center">
               <div className="text-sm font-medium">No KPIs yet</div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Add custom KPI definitions per client (leads, revenue, reviews, donations, etc.).
+                Add custom KPI definitions per client (leads, revenue, reviews,
+                donations, etc.).
               </div>
             </div>
           ) : null}
@@ -531,7 +585,10 @@ export default function RoiDashboard() {
             </div>
             <div className="grid gap-2">
               <Label>Kind</Label>
-              <Select value={newMetricKind} onValueChange={(v) => setNewMetricKind(v as any)}>
+              <Select
+                value={newMetricKind}
+                onValueChange={(v) => setNewMetricKind(v as any)}
+              >
                 <SelectTrigger className="h-11 rounded-2xl">
                   <SelectValue />
                 </SelectTrigger>

@@ -53,7 +53,7 @@ function statusBadge(status: ClientStatus) {
 // Local draft type extends Client with UI-only fields.
 type ClientDraft = Omit<Client, "id" | "createdAt" | "updatedAt"> & {
   /** Local-only numeric input for total service expenses used to auto-calc lifetime value */
-  serviceExpensesTotal?: number;
+  serviceExpensesTotal?: never; // no longer used; lifetime comes from ROI tracking
   /** Whether this client is included in retention metrics (UI-only for now) */
   includeInRetention?: boolean;
 };
@@ -157,8 +157,6 @@ export default function Clients() {
       internalContext: client.internalContext,
       // Existing clients default to being included in retention
       includeInRetention: true,
-      // serviceExpensesTotal is no longer edited here; lifetime value comes from ROI tracking
-      serviceExpensesTotal: undefined,
     });
     setOpen(true);
   }
@@ -169,7 +167,7 @@ export default function Clients() {
       return;
     }
 
-    // Lifetime value is now controlled by ROI tracking, so we just pass through whatever is on the client
+    // Lifetime value is controlled by ROI tracking, so we just pass through
     const payload = {
       ...draft,
       name: draft.name.trim(),
@@ -339,21 +337,28 @@ export default function Clients() {
           </DialogHeader>
 
           <Tabs defaultValue="details" className="mt-1 w-full">
-            <TabsList className="mb-4 grid w-full grid-cols-2 rounded-2xl bg-muted/60 p-1">
+            <TabsList className="mb-4 grid w-full grid-cols-3 rounded-2xl bg-muted/60 p-1">
               <TabsTrigger
                 value="details"
-                className="rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
+                className="text-sm rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 Details
               </TabsTrigger>
               <TabsTrigger
+                value="billing"
+                className="text-sm rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Billing & metrics
+              </TabsTrigger>
+              <TabsTrigger
                 value="notes"
-                className="rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
+                className="text-sm rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 Notes
               </TabsTrigger>
             </TabsList>
 
+            {/* DETAILS TAB */}
             <TabsContent value="details" className="mt-0">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2 md:col-span-2">
@@ -469,7 +474,12 @@ export default function Clients() {
                     className="h-11 rounded-2xl"
                   />
                 </div>
+              </div>
+            </TabsContent>
 
+            {/* BILLING & METRICS TAB */}
+            <TabsContent value="billing" className="mt-0">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Monthly retainer</Label>
                   <Input
@@ -531,9 +541,51 @@ export default function Clients() {
                     placeholder="Local SEO, Reporting, Operations"
                   />
                 </div>
+
+                <div className="md:col-span-2 mt-2 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">
+                      Include in retention metrics
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Turn this off for one-off projects that shouldn&apos;t affect
+                      retention.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraft((p) => ({
+                        ...p,
+                        includeInRetention:
+                          p.includeInRetention === false
+                            ? true
+                            : !p.includeInRetention
+                            ? true
+                            : false,
+                      }))
+                    }
+                    className={cn(
+                      "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
+                      draft.includeInRetention !== false
+                        ? "bg-[color:var(--im-secondary)] border-[color:var(--im-secondary)]"
+                        : "bg-muted border-border",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                        draft.includeInRetention !== false
+                          ? "translate-x-6"
+                          : "translate-x-1",
+                      )}
+                    />
+                  </button>
+                </div>
               </div>
             </TabsContent>
 
+            {/* NOTES TAB (LAST) */}
             <TabsContent value="notes" className="mt-0">
               <div className="grid gap-4">
                 <div className="grid gap-2">
@@ -562,42 +614,6 @@ export default function Clients() {
               </div>
             </TabsContent>
           </Tabs>
-
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Include in retention metrics</div>
-              <p className="text-xs text-muted-foreground">
-                Turn this off for one-off projects that shouldn&apos;t affect retention.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setDraft((p) => ({
-                  ...p,
-                  includeInRetention:
-                    p.includeInRetention === false
-                      ? true
-                      : !p.includeInRetention
-                      ? true
-                      : false,
-                }))
-              }
-              className={cn(
-                "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
-                draft.includeInRetention !== false
-                  ? "bg-[color:var(--im-secondary)] border-[color:var(--im-secondary)]"
-                  : "bg-muted border-border",
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
-                  draft.includeInRetention !== false ? "translate-x-6" : "translate-x-1",
-                )}
-              />
-            </button>
-          </div>
 
           <DialogFooter className="mt-4">
             <Button
