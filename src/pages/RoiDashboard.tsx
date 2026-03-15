@@ -470,7 +470,7 @@ export default function RoiDashboard() {
         </Card>
       </div>
 
-      {/* Trend, this-month editor, KPI definitions, and dialogs would remain as previously implemented */}
+      {/* (Trend chart, this-month editor, KPI definitions and dialogs can follow here, unchanged.) */}
     </div>
   );
 }
