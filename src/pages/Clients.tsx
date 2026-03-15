@@ -157,7 +157,8 @@ export default function Clients() {
       internalContext: client.internalContext,
       // Existing clients default to being included in retention
       includeInRetention: true,
-      serviceExpensesTotal: client.totalLifetimeValue,
+      // serviceExpensesTotal is no longer edited here; lifetime value comes from ROI tracking
+      serviceExpensesTotal: undefined,
     });
     setOpen(true);
   }
@@ -168,18 +169,12 @@ export default function Clients() {
       return;
     }
 
-    // Auto-calc totalLifetimeValue from service expenses if provided
-    const computedLifetime =
-      draft.serviceExpensesTotal !== undefined
-        ? draft.serviceExpensesTotal
-        : draft.totalLifetimeValue;
-
+    // Lifetime value is now controlled by ROI tracking, so we just pass through whatever is on the client
     const payload = {
       ...draft,
       name: draft.name.trim(),
       tags: draft.tags,
       serviceTypes: draft.serviceTypes,
-      totalLifetimeValue: computedLifetime,
     };
 
     if (editing) {
@@ -491,23 +486,6 @@ export default function Clients() {
                     inputMode="numeric"
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>Service expenses (total)</Label>
-                  <Input
-                    value={draft.serviceExpensesTotal ?? ""}
-                    onChange={(e) =>
-                      setDraft((p) => ({
-                        ...p,
-                        serviceExpensesTotal: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      }))
-                    }
-                    className="h-11 rounded-2xl"
-                    inputMode="numeric"
-                    placeholder="Total value of services for this client"
-                  />
-                </div>
 
                 <div className="grid gap-1 md:col-span-2">
                   <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3">
@@ -516,13 +494,11 @@ export default function Clients() {
                         Total lifetime value
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Automatically calculated from service expenses.
+                        This is calculated from ROI tracking for this client.
                       </div>
                     </div>
                     <div className="text-right text-lg font-semibold">
-                      {draft.serviceExpensesTotal !== undefined
-                        ? formatCurrency(draft.serviceExpensesTotal)
-                        : draft.totalLifetimeValue !== undefined
+                      {draft.totalLifetimeValue !== undefined
                         ? formatCurrency(draft.totalLifetimeValue)
                         : "—"}
                     </div>
