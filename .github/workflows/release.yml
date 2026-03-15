@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without v (e.g., 1.0 or 1.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -24,6 +30,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup tag and release names
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=v${{ inputs.version }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Imani OS v${{ inputs.version }}" >> $GITHUB_ENV
+            echo "RELEASE_BODY=Automated release for v${{ inputs.version }}." >> $GITHUB_ENV
+          else
+            echo "TAG_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Imani OS ${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            echo "RELEASE_BODY=Automated release for ${GITHUB_REF_NAME}." >> $GITHUB_ENV
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -43,8 +62,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Imani OS ${{ github.ref_name }}
-          releaseBody: Automated release for ${{ github.ref_name }}.
+          tagName: ${{ env.TAG_NAME }}
+          releaseName: ${{ env.RELEASE_NAME }}
+          releaseBody: ${{ env.RELEASE_BODY }}
           prerelease: false
           includeUpdaterJson: true
