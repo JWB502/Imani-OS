@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "tauri": "tauri"
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
