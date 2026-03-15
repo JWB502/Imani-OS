@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import type { Client, ClientStatus } from "@/types/imani";
@@ -336,261 +337,298 @@ export default function Clients() {
         }}
       >
         <DialogContent className="max-w-2xl rounded-3xl">
-          <DialogHeader>
+          <DialogHeader className="pb-2">
             <DialogTitle className="text-xl">
               {editing ? "Edit client" : "New client"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="grid gap-2 md:col-span-2">
-              <Label>Client name</Label>
-              <Input
-                value={draft.name}
-                onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                className="h-11 rounded-2xl"
-                placeholder="e.g., North Star Nonprofit"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select
-                value={draft.status}
-                onValueChange={(v) =>
-                  setDraft((p) => ({ ...p, status: v as ClientStatus }))
-                }
+          <Tabs defaultValue="details" className="mt-1 w-full">
+            <TabsList className="mb-4 grid w-full grid-cols-2 rounded-2xl bg-muted/60 p-1">
+              <TabsTrigger
+                value="details"
+                className="rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
               >
-                <SelectTrigger className="h-11 rounded-2xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Lead">Lead</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Paused">Paused</SelectItem>
-                  <SelectItem value="Former">Former</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                Details
+              </TabsTrigger>
+              <TabsTrigger
+                value="notes"
+                className="rounded-2xl data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
+              >
+                Notes
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="grid gap-2">
-              <Label>Organization type</Label>
-              <Input
-                value={draft.organizationType ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, organizationType: e.target.value }))
-                }
-                className="h-11 rounded-2xl"
-                placeholder="Nonprofit, local service business…"
-              />
-            </div>
+            <TabsContent value="details" className="mt-0">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Client name</Label>
+                  <Input
+                    value={draft.name}
+                    onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
+                    className="h-11 rounded-2xl"
+                    placeholder="e.g., North Star Nonprofit"
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label>Contact name</Label>
-              <Input
-                value={draft.contactName ?? ""}
-                onChange={(e) => setDraft((p) => ({ ...p, contactName: e.target.value }))}
-                className="h-11 rounded-2xl"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Contact email</Label>
-              <Input
-                value={draft.contactEmail ?? ""}
-                onChange={(e) => setDraft((p) => ({ ...p, contactEmail: e.target.value }))}
-                className="h-11 rounded-2xl"
-                type="email"
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={draft.status}
+                    onValueChange={(v) =>
+                      setDraft((p) => ({ ...p, status: v as ClientStatus }))
+                    }
+                  >
+                    <SelectTrigger className="h-11 rounded-2xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Lead">Lead</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Paused">Paused</SelectItem>
+                      <SelectItem value="Former">Former</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="grid gap-2">
-              <Label>City</Label>
-              <Input
-                value={draft.city ?? ""}
-                onChange={(e) => setDraft((p) => ({ ...p, city: e.target.value }))}
-                className="h-11 rounded-2xl"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>State</Label>
-              <Input
-                value={draft.state ?? ""}
-                onChange={(e) => setDraft((p) => ({ ...p, state: e.target.value }))}
-                className="h-11 rounded-2xl"
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label>Organization type</Label>
+                  <Input
+                    value={draft.organizationType ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, organizationType: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="Nonprofit, local service business…"
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label>Start date</Label>
-              <Input
-                type="date"
-                value={draft.startDate ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    startDate: e.target.value || undefined,
-                  }))
-                }
-                className="h-11 rounded-2xl"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>End date</Label>
-              <Input
-                type="date"
-                value={draft.endDate ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    endDate: e.target.value || undefined,
-                  }))
-                }
-                className="h-11 rounded-2xl"
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label>Contact name</Label>
+                  <Input
+                    value={draft.contactName ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, contactName: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Contact email</Label>
+                  <Input
+                    value={draft.contactEmail ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, contactEmail: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    type="email"
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label>Monthly retainer</Label>
-              <Input
-                value={draft.monthlyRetainer ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    monthlyRetainer: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  }))
-                }
-                className="h-11 rounded-2xl"
-                inputMode="numeric"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Service expenses (total)</Label>
-              <Input
-                value={draft.serviceExpensesTotal ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    serviceExpensesTotal: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  }))
-                }
-                className="h-11 rounded-2xl"
-                inputMode="numeric"
-                placeholder="Total value of services for this client"
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label>City</Label>
+                  <Input
+                    value={draft.city ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, city: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>State</Label>
+                  <Input
+                    value={draft.state ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, state: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                  />
+                </div>
 
-            <div className="grid gap-1 md:col-span-2">
-              <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3">
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Total lifetime value
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Automatically calculated from service expenses.
+                <div className="grid gap-2">
+                  <Label>Start date</Label>
+                  <Input
+                    type="date"
+                    value={draft.startDate ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({
+                        ...p,
+                        startDate: e.target.value || undefined,
+                      }))
+                    }
+                    className="h-11 rounded-2xl"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>End date</Label>
+                  <Input
+                    type="date"
+                    value={draft.endDate ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({
+                        ...p,
+                        endDate: e.target.value || undefined,
+                      }))
+                    }
+                    className="h-11 rounded-2xl"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Monthly retainer</Label>
+                  <Input
+                    value={draft.monthlyRetainer ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({
+                        ...p,
+                        monthlyRetainer: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      }))
+                    }
+                    className="h-11 rounded-2xl"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Service expenses (total)</Label>
+                  <Input
+                    value={draft.serviceExpensesTotal ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({
+                        ...p,
+                        serviceExpensesTotal: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      }))
+                    }
+                    className="h-11 rounded-2xl"
+                    inputMode="numeric"
+                    placeholder="Total value of services for this client"
+                  />
+                </div>
+
+                <div className="grid gap-1 md:col-span-2">
+                  <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3">
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Total lifetime value
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Automatically calculated from service expenses.
+                      </div>
+                    </div>
+                    <div className="text-right text-lg font-semibold">
+                      {draft.serviceExpensesTotal !== undefined
+                        ? formatCurrency(draft.serviceExpensesTotal)
+                        : draft.totalLifetimeValue !== undefined
+                        ? formatCurrency(draft.totalLifetimeValue)
+                        : "—"}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right text-lg font-semibold">
-                  {draft.serviceExpensesTotal !== undefined
-                    ? formatCurrency(draft.serviceExpensesTotal)
-                    : draft.totalLifetimeValue !== undefined
-                    ? formatCurrency(draft.totalLifetimeValue)
-                    : "—"}
+
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Tags (comma-separated)</Label>
+                  <Input
+                    value={draft.tags.join(", ")}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, tags: toCsvArray(e.target.value) }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="retainer, nonprofit, local"
+                  />
+                </div>
+
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Service types (comma-separated)</Label>
+                  <Input
+                    value={draft.serviceTypes.join(", ")}
+                    onChange={(e) =>
+                      setDraft((p) => ({
+                        ...p,
+                        serviceTypes: toCsvArray(e.target.value),
+                      }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="Local SEO, Reporting, Operations"
+                  />
                 </div>
               </div>
-            </div>
+            </TabsContent>
 
-            <div className="grid gap-2 md:col-span-2">
-              <Label>Tags (comma-separated)</Label>
-              <Input
-                value={draft.tags.join(", ")}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, tags: toCsvArray(e.target.value) }))
-                }
-                className="h-11 rounded-2xl"
-                placeholder="retainer, nonprofit, local"
-              />
-            </div>
+            <TabsContent value="notes" className="mt-0">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label>Internal notes</Label>
+                  <Textarea
+                    value={draft.notes ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, notes: e.target.value }))
+                    }
+                    className="min-h-24 rounded-2xl"
+                    placeholder="Relationship context, constraints, priorities…"
+                  />
+                </div>
 
-            <div className="grid gap-2 md:col-span-2">
-              <Label>Service types (comma-separated)</Label>
-              <Input
-                value={draft.serviceTypes.join(", ")}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    serviceTypes: toCsvArray(e.target.value),
-                  }))
-                }
-                className="h-11 rounded-2xl"
-                placeholder="Local SEO, Reporting, Operations"
-              />
-            </div>
-
-            <div className="grid gap-2 md:col-span-2">
-              <Label>Internal notes</Label>
-              <Textarea
-                value={draft.notes ?? ""}
-                onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
-                className="min-h-24 rounded-2xl"
-                placeholder="Relationship context, constraints, priorities…"
-              />
-            </div>
-
-            <div className="grid gap-2 md:col-span-2">
-              <Label>Relationships / context</Label>
-              <Textarea
-                value={draft.internalContext ?? ""}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, internalContext: e.target.value }))
-                }
-                className="min-h-24 rounded-2xl"
-                placeholder="Internal context notes (what the team should remember)…"
-              />
-            </div>
-
-            <div className="md:col-span-2 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
-              <div className="space-y-0.5">
-                <div className="text-sm font-medium">Include in retention metrics</div>
-                <p className="text-xs text-muted-foreground">
-                  Turn this off for one-off projects that shouldn&apos;t affect retention.
-                </p>
+                <div className="grid gap-2">
+                  <Label>Relationships / context</Label>
+                  <Textarea
+                    value={draft.internalContext ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, internalContext: e.target.value }))
+                    }
+                    className="min-h-24 rounded-2xl"
+                    placeholder="Internal context notes (what the team should remember)…"
+                  />
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setDraft((p) => ({
-                    ...p,
-                    includeInRetention:
-                      p.includeInRetention === false
-                        ? true
-                        : !p.includeInRetention
-                        ? true
-                        : false,
-                  }))
-                }
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium">Include in retention metrics</div>
+              <p className="text-xs text-muted-foreground">
+                Turn this off for one-off projects that shouldn&apos;t affect retention.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setDraft((p) => ({
+                  ...p,
+                  includeInRetention:
+                    p.includeInRetention === false
+                      ? true
+                      : !p.includeInRetention
+                      ? true
+                      : false,
+                }))
+              }
+              className={cn(
+                "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
+                draft.includeInRetention !== false
+                  ? "bg-[color:var(--im-secondary)] border-[color:var(--im-secondary)]"
+                  : "bg-muted border-border",
+              )}
+            >
+              <span
                 className={cn(
-                  "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
-                  draft.includeInRetention !== false
-                    ? "bg-[color:var(--im-secondary)] border-[color:var(--im-secondary)]"
-                    : "bg-muted border-border",
+                  "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                  draft.includeInRetention !== false ? "translate-x-6" : "translate-x-1",
                 )}
-              >
-                <span
-                  className={cn(
-                    "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
-                    draft.includeInRetention !== false ? "translate-x-6" : "translate-x-1",
-                  )}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
 
-          <DialogFooter>
-            <Button variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="secondary"
+              className="rounded-2xl"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button className="rounded-2xl" onClick={save}>
