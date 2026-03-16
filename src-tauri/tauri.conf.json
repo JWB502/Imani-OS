@@ -38,7 +38,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": ["nsis", "msi", "dmg"],
+    "targets": ["nsis"],
     "icon": ["icons/icon.png"],
     "windows": {
       "nsis": {

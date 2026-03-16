@@ -17,16 +17,8 @@ env:
 
 jobs:
   build:
-    name: Build (${{ matrix.platform }})
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: ""
-          - platform: windows-latest
-            args: ""
+    name: Build (windows-latest)
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -56,12 +48,12 @@ jobs:
           prerelease: false
           includeUpdaterJson: false
           tauriScript: "npx tauri"
-          args: ${{ matrix.args }}
+          args: ""
 
       - name: Upload updater artifacts (for latest.json)
         uses: actions/upload-artifact@v4
         with:
-          name: bundles-${{ matrix.platform }}
+          name: bundles-windows-latest
           path: src-tauri/target/release/bundle/**
 
   publish-latest-json:
