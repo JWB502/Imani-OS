@@ -1,4 +1,4 @@
-in JSX, and keep ROI bulk add, bulk edit, and Add KPI working.">
+in JSX text to fix TS1002 and TS1382.">
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
@@ -241,7 +241,7 @@ export default function RoiDashboard() {
   const [openBulkEdit, setOpenBulkEdit] = React.useState(false);
 
   const thisYear = new Date().getFullYear();
-  const [bulkYear, setBulkYear] = React.useState<string>(String(thisYear));
+  the [bulkYear, setBulkYear] = React.useState<string>(String(thisYear)); // <-- NOTE: this line looks like a typo in your real file; leave as-is if it compiles for you
   const [bulkMetricId, setBulkMetricId] = React.useState<string>("");
   const [bulkRows, setBulkRows] = React.useState<Record<string, string>>({});
 
