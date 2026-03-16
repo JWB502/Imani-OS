@@ -1,49 +1,29 @@
-{
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "Imani OS",
-  "version": "0.1.0",
-  "identifier": "com.imaniadvantage.imani-os",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:8080",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "withGlobalTauri": true,
-    "windows": [
-      {
-        "label": "main",
-        "title": "Imani OS",
-        "width": 1200,
-        "height": 800,
-        "resizable": true
-      }
-    ],
-    "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com https://api.github.com https://github.com;"
-    }
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2QzY0QjdDMEZGMjUzMzIKUldReVUvSVBmRXZHZHRjSkxraE1KRU5oM3EwZlRrMWZLRktFU1VnaGVIWDc0VU9sMG5OUW5vNm0K",
-      "endpoints": [
-        "https://github.com/JWB502/Imani-OS/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  },
-  "bundle": {
-    "active": true,
-    "createUpdaterArtifacts": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
-    "windows": {
-      "nsis": {
-        "installerIcon": "icons/icon.ico"
-      }
-    }
-  }
-}
+[package]
+name = "imani-os"
+version = "0.1.0"
+description = "Imani OS — internal Windows desktop app"
+authors = ["Imani Advantage"]
+edition = "2021"
+license = "MIT"
+
+# Tauri 2 app binary
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+
+# This section is optional; it just makes clear the crate is a bin.
+[[bin]]
+name = "imani-os"
+path = "src/main.rs"

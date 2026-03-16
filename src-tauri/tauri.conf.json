@@ -39,10 +39,10 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
+    "icon": ["icons/icon.png"],
     "windows": {
       "nsis": {
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.png"
       }
     }
   }
