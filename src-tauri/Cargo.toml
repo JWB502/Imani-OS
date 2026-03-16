@@ -6,13 +6,15 @@ authors = ["Imani Advantage"]
 edition = "2021"
 license = "MIT"
 
-# Tauri 2 app binary
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -23,7 +25,6 @@ lto = true
 codegen-units = 1
 strip = true
 
-# This section is optional; it just makes clear the crate is a bin.
 [[bin]]
 name = "imani-os"
 path = "src/main.rs"
