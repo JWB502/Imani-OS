@@ -1,3 +1,4 @@
+in JSX, and keep ROI bulk add, bulk edit, and Add KPI working.">
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
