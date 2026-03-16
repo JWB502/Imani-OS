@@ -76,7 +76,9 @@ export default function Wins() {
   const query = (localQuery || globalSearchQuery).trim().toLowerCase();
 
   const [open, setOpen] = React.useState(false);
-  const [clientId, setClientId] = React.useState(params.get("clientId") ?? data.clients[0]?.id ?? "");
+  const [clientId, setClientId] = React.useState(
+    params.get("clientId") ?? data.clients[0]?.id ?? "",
+  );
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10));
@@ -249,7 +251,10 @@ export default function Wins() {
                 ) : null}
                 {w.linkedReportId ? (
                   <div className="mt-2 text-sm">
-                    Linked report: <Link className="underline" to={`/reports/${w.linkedReportId}`}>Open</Link>
+                    Linked report:{" "}
+                    <Link className="underline" to={`/reports/${w.linkedReportId}`}>
+                      Open
+                    </Link>
                   </div>
                 ) : null}
               </div>
@@ -257,7 +262,9 @@ export default function Wins() {
               <div className="flex flex-wrap gap-2">
                 <SoftButton
                   className="rounded-2xl bg-white"
-                  onClick={() => updateWin(w.id, { caseStudyPotential: !w.caseStudyPotential })}
+                  onClick={() =>
+                    updateWin(w.id, { caseStudyPotential: !w.caseStudyPotential })
+                  }
                 >
                   {w.caseStudyPotential ? "Unmark case study" : "Mark case study"}
                 </SoftButton>
@@ -398,12 +405,15 @@ export default function Wins() {
 
             <div className="grid gap-2 md:col-span-2">
               <Label>Linked report (optional)</Label>
-              <Select value={linkedReportId} onValueChange={setLinkedReportId}>
+              <Select
+                value={linkedReportId || "none"}
+                onValueChange={(v) => setLinkedReportId(v === "none" ? "" : v)}
+              >
                 <SelectTrigger className="h-11 rounded-2xl">
                   <SelectValue placeholder="Select report" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {reportsForClient.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.title}
@@ -415,7 +425,11 @@ export default function Wins() {
           </div>
 
           <DialogFooter>
-            <Button variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>
+            <Button
+              variant="secondary"
+              className="rounded-2xl"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button className="rounded-2xl" onClick={save}>
