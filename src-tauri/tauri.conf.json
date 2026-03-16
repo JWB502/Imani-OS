@@ -42,7 +42,7 @@
     "icon": ["icons/icon.ico"],
     "windows": {
       "nsis": {
-        "installerIcon": "icons/icon.png"
+        "installerIcon": "icons/icon.ico"
       }
     }
   }
