@@ -123,13 +123,13 @@ export default function Templates() {
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Templates</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => openCreate("full")} className="rounded-2xl">
+          <Button onClick={() => openCreate("full")} className="rounded-2xl shadow-sm">
             <Plus className="mr-2 h-4 w-4" /> New full template
           </Button>
           <Button
             onClick={() => openCreate("section")}
-            variant="secondary"
-            className="rounded-2xl bg-white/70"
+            variant="outline"
+            className="rounded-2xl border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 shadow-sm"
           >
             <Plus className="mr-2 h-4 w-4" /> New section template
           </Button>

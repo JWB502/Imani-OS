@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Minus, Plus, Trash2, TrendingUp } from "lucide-react";
+import { Minus, Plus, Trash2, TrendingUp, FileText, ListChecks, Settings2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useData } from "@/contexts/DataContext";
 import { formatDate, formatPercent } from "@/lib/format";
 import { createId } from "@/lib/id";
@@ -227,356 +228,385 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-3xl border-border/70 bg-white/80 p-0 shadow-xl backdrop-blur">
-        <div className="p-6 sm:p-7 md:p-8 space-y-6">
-          <DialogHeader className="gap-2">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <DialogTitle className="text-xl tracking-tight">
-                  {isEdit ? "Edit campaign" : "Add campaign"}
-                </DialogTitle>
-                <DialogDescription>
-                  Track spend, income, and ad-hoc outcomes for a single channel.
-                </DialogDescription>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Badge className={cn("rounded-full px-3 py-1 text-xs ring-1 ring-border/50", roiChipClass)}>
-                  ROI: {roi === undefined ? "—" : formatPercent(roi)}
-                </Badge>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <Separator className="my-5" />
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="cmp-title">Title</Label>
-                  <Input
-                    id="cmp-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Optional (defaults to channel + start date)"
-                    className="rounded-2xl bg-white/80"
-                  />
+        <div className="flex flex-col h-[85vh] max-h-[700px]">
+          <div className="p-6 sm:p-7 md:p-8 pb-4">
+            <DialogHeader className="gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <DialogTitle className="text-xl tracking-tight">
+                    {isEdit ? "Edit campaign" : "Add campaign"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Track spend, income, and ad-hoc outcomes for a single channel.
+                  </DialogDescription>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Channel</Label>
-                  <Select value={channelOption} onValueChange={setChannelOption}>
-                    <SelectTrigger className="rounded-2xl bg-white/80">
-                      <SelectValue placeholder="Choose a channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CHANNEL_OPTIONS.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.channel ? (
-                    <div className="text-xs text-rose-700">{errors.channel}</div>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Management type</Label>
-                  <Select
-                    value={managementType}
-                    onValueChange={(v) => setManagementType(v as ManagementType)}
-                  >
-                    <SelectTrigger className="rounded-2xl bg-white/80">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DIY">DIY</SelectItem>
-                      <SelectItem value="DWY">DWY</SelectItem>
-                      <SelectItem value="DFY">DFY</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {channelOption === "Other" ? (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="cmp-channel-other">Channel (other)</Label>
-                    <Input
-                      id="cmp-channel-other"
-                      value={otherChannel}
-                      onChange={(e) => setOtherChannel(e.target.value)}
-                      placeholder="e.g., TikTok Ads"
-                      className="rounded-2xl bg-white/80"
-                    />
-                  </div>
-                ) : null}
-
-                <div className="space-y-2">
-                  <Label htmlFor="cmp-start">Start date</Label>
-                  <Input
-                    id="cmp-start"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="rounded-2xl bg-white/80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cmp-end">End date</Label>
-                  <Input
-                    id="cmp-end"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="rounded-2xl bg-white/80"
-                  />
-                </div>
-                {errors.dates ? (
-                  <div className="md:col-span-2 text-xs text-rose-700">{errors.dates}</div>
-                ) : null}
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="cmp-budget">Budget</Label>
-                  <Input
-                    id="cmp-budget"
-                    inputMode="decimal"
-                    type="number"
-                    min={0}
-                    step="1"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="0"
-                    className="rounded-2xl bg-white/80"
-                  />
-                  {errors.budget ? (
-                    <div className="text-xs text-rose-700">{errors.budget}</div>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cmp-spend">Actual ad spend</Label>
-                  <Input
-                    id="cmp-spend"
-                    inputMode="decimal"
-                    type="number"
-                    min={0}
-                    step="1"
-                    value={adSpend}
-                    onChange={(e) => setAdSpend(e.target.value)}
-                    placeholder="0"
-                    className="rounded-2xl bg-white/80"
-                  />
-                  {errors.adSpend ? (
-                    <div className="text-xs text-rose-700">{errors.adSpend}</div>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cmp-income">Income</Label>
-                  <Input
-                    id="cmp-income"
-                    inputMode="decimal"
-                    type="number"
-                    min={0}
-                    step="1"
-                    value={income}
-                    onChange={(e) => setIncome(e.target.value)}
-                    placeholder="0"
-                    className="rounded-2xl bg-white/80"
-                  />
-                  {errors.income ? (
-                    <div className="text-xs text-rose-700">{errors.income}</div>
-                  ) : null}
+                <div className="flex items-center gap-2">
+                  <Badge className={cn("rounded-full px-3 py-1 text-xs ring-1 ring-border/50", roiChipClass)}>
+                    ROI: {roi === undefined ? "—" : formatPercent(roi)}
+                  </Badge>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cmp-notes">Notes</Label>
-                <Textarea
-                  id="cmp-notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Context, offer details, targeting notes, creative learnings…"
-                  className="min-h-[110px] rounded-2xl bg-white/80"
-                />
-              </div>
-
-              <div className="rounded-3xl border border-border/70 bg-white/70 p-4">
-                <div className="text-sm font-semibold">Results</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Track outcomes for this campaign. Use Metric, Value, and Unit (optional). Examples: Leads, Calls, Sign-ups, Bookings.
-                </div>
-
-                <div className="mt-4 grid grid-cols-12 gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                  <div className="col-span-6">Metric</div>
-                  <div className="col-span-3">Value</div>
-                  <div className="col-span-2">Unit</div>
-                  <div className="col-span-1 text-right">Remove</div>
-                </div>
-
-                <div className="mt-2 space-y-3">
-                  {results.map((r, idx) => (
-                    <div key={r.id} className="grid grid-cols-12 gap-2">
-                      <div className="col-span-6">
-                        <Input
-                          value={r.name}
-                          onChange={(e) =>
-                            setResults((prev) =>
-                              prev.map((p) => (p.id === r.id ? { ...p, name: e.target.value } : p)),
-                            )
-                          }
-                          placeholder={idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"}
-                          aria-label="Result metric name"
-                          className="h-9 rounded-2xl bg-white/80"
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Input
-                          value={r.value}
-                          inputMode="decimal"
-                          type="number"
-                          step="1"
-                          onChange={(e) =>
-                            setResults((prev) =>
-                              prev.map((p) => (p.id === r.id ? { ...p, value: e.target.value } : p)),
-                            )
-                          }
-                          placeholder="Number"
-                          aria-label="Result value"
-                          className="h-9 rounded-2xl bg-white/80"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          value={r.unit}
-                          onChange={(e) =>
-                            setResults((prev) =>
-                              prev.map((p) => (p.id === r.id ? { ...p, unit: e.target.value } : p)),
-                            )
-                          }
-                          placeholder="Unit (optional)"
-                          aria-label="Result unit (optional)"
-                          className="h-9 rounded-2xl bg-white/80"
-                        />
-                      </div>
-                      <div className="col-span-1 flex items-center justify-end">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-9 w-9 rounded-2xl"
-                          onClick={() =>
-                            setResults((prev) =>
-                              prev.length <= 1 ? prev : prev.filter((p) => p.id !== r.id),
-                            )
-                          }
-                          aria-label="Remove result"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full rounded-2xl bg-white/80"
-                    onClick={() =>
-                      setResults((prev) => [
-                        ...prev,
-                        { id: createId("cmr"), name: "", value: "", unit: "" },
-                      ])
-                    }
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add result
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-primary/20 bg-primary/5 p-4 text-foreground ring-1 ring-primary/10">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--im-navy)]">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  Live ROI
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Based on Income and Actual Ad Spend.
-                </div>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <div
-                    className={cn(
-                      "text-3xl font-semibold tracking-tight",
-                      roi === undefined
-                        ? "text-foreground/70"
-                        : roi >= 25
-                          ? "text-emerald-700"
-                          : roi >= 0
-                            ? "text-sky-700"
-                            : "text-rose-700",
-                    )}
-                  >
-                    {roi === undefined ? "—" : formatPercent(roi)}
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    Spend must be greater than 0
-                  </div>
-                </div>
-              </div>
-            </div>
+            </DialogHeader>
           </div>
 
-          <DialogFooter className="mt-6 gap-2 sm:gap-2">
-            {isEdit && campaign ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="rounded-2xl">
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-3xl border-border/70 bg-white/90 backdrop-blur">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => {
-                        deleteCampaign(campaign.id);
-                        onOpenChange(false);
-                      }}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : (
-              <div />
-            )}
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-2xl bg-white"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="button" className="rounded-2xl" onClick={onSave}>
-                Save
-              </Button>
+          <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 sm:px-7 md:px-8">
+              <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white/50 p-1">
+                <TabsTrigger value="general" className="rounded-xl gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  General
+                </TabsTrigger>
+                <TabsTrigger value="results" className="rounded-xl gap-2">
+                  <ListChecks className="h-4 w-4" />
+                  Results
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="rounded-xl gap-2">
+                  <FileText className="h-4 w-4" />
+                  Notes
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </DialogFooter>
+
+            <div className="flex-1 overflow-y-auto p-6 sm:p-7 md:p-8 pt-4">
+              <TabsContent value="general" className="mt-0 space-y-6">
+                <div className="grid gap-5 lg:grid-cols-3">
+                  <div className="space-y-4 lg:col-span-2">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="cmp-title">Title</Label>
+                        <Input
+                          id="cmp-title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Optional (defaults to channel + start date)"
+                          className="rounded-2xl bg-white/80"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Channel</Label>
+                        <Select value={channelOption} onValueChange={setChannelOption}>
+                          <SelectTrigger className="rounded-2xl bg-white/80">
+                            <SelectValue placeholder="Choose a channel" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CHANNEL_OPTIONS.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.channel ? (
+                          <div className="text-xs text-rose-700">{errors.channel}</div>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Management type</Label>
+                        <Select
+                          value={managementType}
+                          onValueChange={(v) => setManagementType(v as ManagementType)}
+                        >
+                          <SelectTrigger className="rounded-2xl bg-white/80">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="DIY">DIY</SelectItem>
+                            <SelectItem value="DWY">DWY</SelectItem>
+                            <SelectItem value="DFY">DFY</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {channelOption === "Other" ? (
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="cmp-channel-other">Channel (other)</Label>
+                          <Input
+                            id="cmp-channel-other"
+                            value={otherChannel}
+                            onChange={(e) => setOtherChannel(e.target.value)}
+                            placeholder="e.g., TikTok Ads"
+                            className="rounded-2xl bg-white/80"
+                          />
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cmp-start">Start date</Label>
+                        <Input
+                          id="cmp-start"
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="rounded-2xl bg-white/80"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cmp-end">End date</Label>
+                        <Input
+                          id="cmp-end"
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="rounded-2xl bg-white/80"
+                        />
+                      </div>
+                      {errors.dates ? (
+                        <div className="md:col-span-2 text-xs text-rose-700">{errors.dates}</div>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="cmp-budget">Budget</Label>
+                        <Input
+                          id="cmp-budget"
+                          inputMode="decimal"
+                          type="number"
+                          min={0}
+                          step="1"
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                          placeholder="0"
+                          className="rounded-2xl bg-white/80"
+                        />
+                        {errors.budget ? (
+                          <div className="text-xs text-rose-700">{errors.budget}</div>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cmp-spend">Actual ad spend</Label>
+                        <Input
+                          id="cmp-spend"
+                          inputMode="decimal"
+                          type="number"
+                          min={0}
+                          step="1"
+                          value={adSpend}
+                          onChange={(e) => setAdSpend(e.target.value)}
+                          placeholder="0"
+                          className="rounded-2xl bg-white/80"
+                        />
+                        {errors.adSpend ? (
+                          <div className="text-xs text-rose-700">{errors.adSpend}</div>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cmp-income">Income</Label>
+                        <Input
+                          id="cmp-income"
+                          inputMode="decimal"
+                          type="number"
+                          min={0}
+                          step="1"
+                          value={income}
+                          onChange={(e) => setIncome(e.target.value)}
+                          placeholder="0"
+                          className="rounded-2xl bg-white/80"
+                        />
+                        {errors.income ? (
+                          <div className="text-xs text-rose-700">{errors.income}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-3xl border border-primary/20 bg-primary/5 p-4 text-foreground ring-1 ring-primary/10">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--im-navy)]">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        Live ROI
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Based on Income and Actual Ad Spend.
+                      </div>
+                      <div className="mt-4 flex items-end justify-between gap-3">
+                        <div
+                          className={cn(
+                            "text-3xl font-semibold tracking-tight",
+                            roi === undefined
+                              ? "text-foreground/70"
+                              : roi >= 25
+                                ? "text-emerald-700"
+                                : roi >= 0
+                                  ? "text-sky-700"
+                                  : "text-rose-700",
+                          )}
+                        >
+                          {roi === undefined ? "—" : formatPercent(roi)}
+                        </div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          Spend must > 0
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="results" className="mt-0">
+                <div className="rounded-3xl border border-border/70 bg-white/70 p-6">
+                  <div className="text-sm font-semibold">Campaign Results</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Track outcomes for this campaign. Use Metric, Value, and Unit (optional). Examples: Leads, Calls, Sign-ups, Bookings.
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-12 gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                    <div className="col-span-6">Metric</div>
+                    <div className="col-span-3">Value</div>
+                    <div className="col-span-2">Unit</div>
+                    <div className="col-span-1 text-right"></div>
+                  </div>
+
+                  <div className="mt-2 space-y-3">
+                    {results.map((r, idx) => (
+                      <div key={r.id} className="grid grid-cols-12 gap-2">
+                        <div className="col-span-6">
+                          <Input
+                            value={r.name}
+                            onChange={(e) =>
+                              setResults((prev) =>
+                                prev.map((p) => (p.id === r.id ? { ...p, name: e.target.value } : p)),
+                              )
+                            }
+                            placeholder={idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"}
+                            aria-label="Result metric name"
+                            className="h-10 rounded-2xl bg-white/80"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            value={r.value}
+                            inputMode="decimal"
+                            type="number"
+                            step="1"
+                            onChange={(e) =>
+                              setResults((prev) =>
+                                prev.map((p) => (p.id === r.id ? { ...p, value: e.target.value } : p)),
+                              )
+                            }
+                            placeholder="Number"
+                            aria-label="Result value"
+                            className="h-10 rounded-2xl bg-white/80"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            value={r.unit}
+                            onChange={(e) =>
+                              setResults((prev) =>
+                                prev.map((p) => (p.id === r.id ? { ...p, unit: e.target.value } : p)),
+                              )
+                            }
+                            placeholder="Unit"
+                            aria-label="Result unit (optional)"
+                            className="h-10 rounded-2xl bg-white/80"
+                          />
+                        </div>
+                        <div className="col-span-1 flex items-center justify-end">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-10 w-10 rounded-2xl text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            onClick={() =>
+                              setResults((prev) =>
+                                prev.length <= 1 ? prev : prev.filter((p) => p.id !== r.id),
+                              )
+                            }
+                            aria-label="Remove result"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full rounded-2xl bg-white/80 border-dashed border-2 hover:bg-white"
+                      onClick={() =>
+                        setResults((prev) => [
+                          ...prev,
+                          { id: createId("cmr"), name: "", value: "", unit: "" },
+                        ])
+                      }
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add result
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="notes" className="mt-0">
+                <div className="space-y-2">
+                  <Label htmlFor="cmp-notes">Campaign Notes</Label>
+                  <Textarea
+                    id="cmp-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Context, offer details, targeting notes, creative learnings…"
+                    className="min-h-[300px] rounded-2xl bg-white/80 p-4"
+                  />
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+
+          <div className="p-6 sm:p-7 md:p-8 pt-4 border-t border-border/50 bg-white/40">
+            <DialogFooter className="gap-2 sm:gap-2">
+              {isEdit && campaign ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="rounded-2xl">
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="rounded-3xl border-border/70 bg-white/90 backdrop-blur">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => {
+                          deleteCampaign(campaign.id);
+                          onOpenChange(false);
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl bg-white"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="button" className="rounded-2xl" onClick={onSave}>
+                  Save Campaign
+                </Button>
+              </div>
+            </DialogFooter>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

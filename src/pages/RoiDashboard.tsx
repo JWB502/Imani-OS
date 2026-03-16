@@ -118,7 +118,8 @@ export default function RoiDashboard() {
       params.set("clientId", clientId);
       setParams(params, { replace: true });
     }
-  }, [clientId, clientIdFromUrl, params, setParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
 
   React.useEffect(() => {
     if (!clientId) return;
@@ -398,6 +399,7 @@ export default function RoiDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header and controls */}
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-sm font-medium text-muted-foreground">
@@ -449,6 +451,7 @@ export default function RoiDashboard() {
         </div>
       </div>
 
+      {/* Overall ROI summary row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm md:col-span-2">
           <CardHeader>
@@ -506,6 +509,7 @@ export default function RoiDashboard() {
         </Card>
       </div>
 
+      {/* Chart + this month editor */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm lg:col-span-2">
           <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -699,6 +703,7 @@ export default function RoiDashboard() {
 
       <RoiSummary revenue={monthRevenue} expenses={monthExpenses} />
 
+      {/* Bulk add months dialog */}
       <BulkMonthAddDialog
         open={openBulk}
         onOpenChange={setOpenBulk}
@@ -706,6 +711,7 @@ export default function RoiDashboard() {
         existingMonths={months.map((m) => m.month)}
       />
 
+      {/* Bulk edit KPI dialog */}
       <Dialog open={openBulkEdit} onOpenChange={setOpenBulkEdit}>
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
@@ -781,6 +787,7 @@ export default function RoiDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Add / edit KPI dialog */}
       <Dialog open={openMetric} onOpenChange={setOpenMetric}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
