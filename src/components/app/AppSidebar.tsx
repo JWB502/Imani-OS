@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Building2,
   FileText,
   LayoutDashboard,
   Settings,
@@ -8,6 +9,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+
 import { NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
@@ -36,6 +38,7 @@ const nav = [
   { to: "/roi", label: "ROI Tracking", icon: TrendingUp },
   { to: "/wins", label: "Wins", icon: Sparkles },
   { to: "/impact", label: "Agency Impact", icon: BarChart3 },
+  { to: "/hq", label: "Agency HQ", icon: Building2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

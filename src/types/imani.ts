@@ -219,4 +219,60 @@ export type AppData = {
   reports: Report[];
   metricDefinitions: MetricDefinition[];
   monthlyMetrics: MonthlyMetric[];
+  agencyHq?: AgencyHq;
+};
+
+export type AgencyHq = {
+  overview: AgencyOverview;
+  products: AgencyProduct[];
+  expenses: AgencyExpense[];
+  annualProfitGoal?: number;
+};
+
+export type AgencyOverview = {
+  name: string;
+  description: string;
+  location: {
+    city: string;
+    state: string;
+    country: string;
+  };
+  websiteUrl: string;
+  foundingDate: string;
+  employeeCount: number;
+  annualMarketingBudget: number;
+};
+
+export type PricingModel = "one-time" | "monthly" | "quarterly" | "semi-annually" | "annually";
+export type ProductType = "product" | "service";
+
+export type AgencyProduct = {
+  id: ID;
+  name: string;
+  description: string;
+  type: ProductType;
+  pricingModel: PricingModel;
+  price: number;
+  activeClients: number; // For recurring revenue tracking
+  projectedSales: number; // For Goal & Projections
+};
+
+export type ExpenseCategory =
+  | "Software/SaaS"
+  | "Payroll"
+  | "Marketing"
+  | "Rent/Office"
+  | "Taxes"
+  | "Legal/Professional"
+  | "Other";
+
+export type BillingCycle = "monthly" | "quarterly" | "semi-annually" | "annually";
+
+export type AgencyExpense = {
+  id: ID;
+  name: string;
+  description: string;
+  category: ExpenseCategory;
+  billingCycle: BillingCycle;
+  cost: number;
 };

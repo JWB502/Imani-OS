@@ -1,5 +1,9 @@
 import * as React from "react";
 import type {
+  AgencyExpense,
+  AgencyHq,
+  AgencyOverview,
+  AgencyProduct,
   AppData,
   Campaign,
   Client,
@@ -11,6 +15,7 @@ import type {
   SectionTemplate,
   Win,
 } from "@/types/imani";
+
 import { createSeedData } from "@/data/seed";
 import { createId } from "@/lib/id";
 import { createPrivacyId } from "@/lib/privacy";
@@ -127,6 +132,14 @@ type DataContextValue = {
     params: BulkUpsertMonthlyMetricsParams,
   ) => BulkUpsertMonthlyMetricsResult;
   deleteMonthlyMetric: (id: string) => void;
+
+  // Agency HQ
+  updateAgencyOverview: (patch: Partial<AgencyOverview>) => void;
+  upsertAgencyProduct: (product: Omit<AgencyProduct, "id"> & { id?: string }) => void;
+  deleteAgencyProduct: (id: string) => void;
+  upsertAgencyExpense: (expense: Omit<AgencyExpense, "id"> & { id?: string }) => void;
+  deleteAgencyExpense: (id: string) => void;
+  updateAgencyAnnualProfitGoal: (goal: number) => void;
 };
 
 const DataContext = React.createContext<DataContextValue | null>(null);
@@ -881,6 +894,119 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [data, persist],
   );
 
+  const initAgencyHq = React.useCallback((base: AppData): AppData => {
+    if (base.agencyHq) return base;
+    return {
+      ...base,
+      agencyHq: {
+        overview: {
+          name: "",
+          description: "",
+          location: { city: "", state: "", country: "" },
+          websiteUrl: "",
+          foundingDate: "",
+          employeeCount: 0,
+          annualMarketingBudget: 0,
+        },
+        products: [],
+        expenses: [],
+      },
+    };
+  }, []);
+
+  const updateAgencyOverview = React.useCallback(
+    (patch: Partial<AgencyOverview>) => {
+      const base = initAgencyHq(data);
+      persist({
+        ...base,
+        agencyHq: {
+          ...base.agencyHq!,
+          overview: { ...base.agencyHq!.overview, ...patch },
+        },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
+  const upsertAgencyProduct = React.useCallback(
+    (patch: Omit<AgencyProduct, "id"> & { id?: string }) => {
+      const base = initAgencyHq(data);
+      const products = [...base.agencyHq!.products];
+      if (patch.id) {
+        const idx = products.findIndex((p) => p.id === patch.id);
+        if (idx !== -1) {
+          products[idx] = { ...products[idx]!, ...patch } as AgencyProduct;
+        }
+      } else {
+        products.push({ ...patch, id: createId("prod") } as AgencyProduct);
+      }
+      persist({
+        ...base,
+        agencyHq: { ...base.agencyHq!, products },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
+  const deleteAgencyProduct = React.useCallback(
+    (id: string) => {
+      const base = initAgencyHq(data);
+      persist({
+        ...base,
+        agencyHq: {
+          ...base.agencyHq!,
+          products: base.agencyHq!.products.filter((p) => p.id !== id),
+        },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
+  const upsertAgencyExpense = React.useCallback(
+    (patch: Omit<AgencyExpense, "id"> & { id?: string }) => {
+      const base = initAgencyHq(data);
+      const expenses = [...base.agencyHq!.expenses];
+      if (patch.id) {
+        const idx = expenses.findIndex((e) => e.id === patch.id);
+        if (idx !== -1) {
+          expenses[idx] = { ...expenses[idx]!, ...patch } as AgencyExpense;
+        }
+      } else {
+        expenses.push({ ...patch, id: createId("exp") } as AgencyExpense);
+      }
+      persist({
+        ...base,
+        agencyHq: { ...base.agencyHq!, expenses },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
+  const deleteAgencyExpense = React.useCallback(
+    (id: string) => {
+      const base = initAgencyHq(data);
+      persist({
+        ...base,
+        agencyHq: {
+          ...base.agencyHq!,
+          expenses: base.agencyHq!.expenses.filter((e) => e.id !== id),
+        },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
+  const updateAgencyAnnualProfitGoal = React.useCallback(
+    (goal: number) => {
+      const base = initAgencyHq(data);
+      persist({
+        ...base,
+        agencyHq: { ...base.agencyHq!, annualProfitGoal: goal },
+      });
+    },
+    [data, initAgencyHq, persist],
+  );
+
   return (
     <DataContext.Provider
       value={{
@@ -916,6 +1042,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         upsertMonthlyMetric,
         bulkUpsertMonthlyMetrics,
         deleteMonthlyMetric,
+        updateAgencyOverview,
+        upsertAgencyProduct,
+        deleteAgencyProduct,
+        upsertAgencyExpense,
+        deleteAgencyExpense,
+        updateAgencyAnnualProfitGoal,
       }}
     >
       {children}
