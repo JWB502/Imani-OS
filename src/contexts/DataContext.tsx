@@ -90,6 +90,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     monthlyMetrics: p.monthlyMetrics.filter(m => m.clientId !== id)
   }));
 
+  const ensureStandardMetricsForClient = useCallback((cid: string) => {
+    setData(prev => {
+      const existing = prev.metricDefinitions.filter(m => m.clientId === cid);
+      const hasRev = existing.some(m => m.isStandard && m.name === "Revenue");
+      const hasExp = existing.some(m => m.isStandard && m.name === "Service Expenses");
+
+      if (hasRev && hasExp) return prev;
+
+      const nextDefs = [...prev.metricDefinitions];
+      if (!hasRev) {
+        nextDefs.push({ 
+          id: createId("md"), 
+          clientId: cid, 
+          name: "Revenue", 
+          kind: "currency", 
+          isStandard: true 
+        });
+      }
+      if (!hasExp) {
+        nextDefs.push({ 
+          id: createId("md"), 
+          clientId: cid, 
+          name: "Service Expenses", 
+          kind: "currency", 
+          isStandard: true 
+        });
+      }
+
+      return { ...prev, metricDefinitions: nextDefs };
+    });
+  }, []);
+
   const bulkUpsertMonthlyMetrics = (metrics: any[]) => {
     const now = new Date().toISOString();
     setData(prev => {
@@ -115,9 +147,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const createReport = (r: any) => setData(p => ({ ...p, reports: [r, ...p.reports] }));
-
-  // Value object for the provider
   const value: DataContextType = {
     data,
     createClient,
@@ -125,7 +154,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deleteClient,
     resetToSeed,
     bulkUpsertMonthlyMetrics,
-    // ... rest of methods implemented using the same pattern
+    ensureStandardMetricsForClient,
     createCampaign: (c: any) => setData(p => ({ ...p, campaigns: [...p.campaigns, { ...c, id: createId("cmp"), updatedAt: new Date().toISOString() }] })),
     updateCampaign: (id: string, c: any) => setData(p => ({ ...p, campaigns: p.campaigns.map(x => x.id === id ? { ...x, ...c, updatedAt: new Date().toISOString() } : x) })),
     deleteCampaign: (id: string) => setData(p => ({ ...p, campaigns: p.campaigns.filter(x => x.id !== id) })),
@@ -135,7 +164,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createMetricDefinition: (d: any) => setData(p => ({ ...p, metricDefinitions: [...p.metricDefinitions, { ...d, id: createId("md") }] })),
     updateMetricDefinition: (id: string, d: any) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.map(x => x.id === id ? { ...x, ...d } : x) })),
     deleteMetricDefinition: (id: string) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.filter(x => x.id !== id) })),
-    ensureStandardMetricsForClient: (cid: string) => {}, 
     upsertMonthlyMetric: (m: any) => bulkUpsertMonthlyMetrics([m]),
     deleteMonthlyMetric: (id: string) => setData(p => ({ ...p, monthlyMetrics: p.monthlyMetrics.filter(x => x.id !== id) })),
     createSectionTemplate: (t: any) => { const nt = { ...t, id: createId("st"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, sectionTemplates: [...p.sectionTemplates, nt] })); return nt; },
@@ -146,7 +174,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateFullTemplate: (id: string, t: any) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.map(x => x.id === id ? { ...x, ...t, updatedAt: new Date().toISOString() } : x) })),
     duplicateFullTemplate: (id: string) => { const t = data.fullTemplates.find(x => x.id === id); if (!t) return; return value.createFullTemplate({ ...t, name: `${t.name} (Copy)` }); },
     deleteFullTemplate: (id: string) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.filter(x => x.id !== id) })),
-    createReportFromTemplate: (cid: string, tid: string) => { /* logic to build report from sections */ },
+    createReportFromTemplate: (cid: string, tid: string) => { /* logic */ },
     updateReport: (id: string, r: any) => setData(p => ({ ...p, reports: p.reports.map(x => x.id === id ? { ...x, ...r, updatedAt: new Date().toISOString() } : x) })),
     duplicateReport: (id: string) => { const r = data.reports.find(x => x.id === id); if (!r) return; const nr = { ...r, id: createId("rp"), title: `${r.title} (Copy)`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, reports: [nr, ...p.reports] })); return nr; },
     deleteReport: (id: string) => setData(p => ({ ...p, reports: p.reports.filter(x => x.id !== id) })),
