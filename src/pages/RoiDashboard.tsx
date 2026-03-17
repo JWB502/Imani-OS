@@ -1,4 +1,3 @@
-' in JSX.">
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
@@ -237,7 +236,7 @@ export default function RoiDashboard() {
                 {overallRoi.months} month{overallRoi.months === 1 ? "" : "s"}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
-                Only months with both Revenue and Service Expenses > 0 are
+                Only months with both Revenue and Service Expenses {">"} 0 are
                 included.
               </div>
             </div>

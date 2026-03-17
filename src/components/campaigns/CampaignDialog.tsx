@@ -1,4 +1,3 @@
-' in JSX.">
 import * as React from "react";
 import {
   FileText,
@@ -470,7 +469,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                           {roi === undefined ? "—" : formatPercent(roi)}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
-                          Spend must > 0
+                          Spend must {">"} 0
                         </div>
                       </div>
                     </div>
