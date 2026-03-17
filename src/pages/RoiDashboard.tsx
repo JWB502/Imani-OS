@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import {
   Line,
   LineChart,
@@ -40,6 +40,7 @@ import { RoiSummary } from "@/components/roi/RoiSummary";
 import { ImpactToggle } from "@/components/roi/ImpactToggle";
 import { RoiPerformanceChart } from "@/components/roi/RoiPerformanceChart";
 import { RoiClientSelector } from "@/components/roi/RoiClientSelector";
+import { RoiExportDialog } from "@/components/roi/RoiExportDialog";
 
 function normalizeName(s: string) {
   return s.trim().toLowerCase();
@@ -214,6 +215,7 @@ export default function RoiDashboard() {
   const monthEntry = months.find((m) => m.month === activeMonth);
 
   const [openBulk, setOpenBulk] = React.useState(false);
+  const [openExport, setOpenExport] = React.useState(false);
   const [openAddMetric, setOpenAddMetric] = React.useState(false);
   const [newMetric, setNewMetric] = React.useState({
     name: "",
@@ -282,6 +284,14 @@ export default function RoiDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-2xl"
+            onClick={() => setOpenExport(true)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
           <Button
             variant="outline"
             className="rounded-2xl"
@@ -691,6 +701,14 @@ export default function RoiDashboard() {
         onOpenChange={setOpenBulk}
         client={client}
         metricDefs={metricDefs}
+      />
+
+      <RoiExportDialog
+        open={openExport}
+        onOpenChange={setOpenExport}
+        client={client}
+        metricDefs={metricDefs}
+        months={months}
       />
     </div>
   );
