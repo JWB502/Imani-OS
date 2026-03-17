@@ -4,8 +4,8 @@ import { useData } from "@/contexts/DataContext";
 export default function Impact() {
   const { data } = useData();
 
-  const activeClientsCount = data.clients.filter((c) => c.status === "active").length;
-  const completedReportsCount = data.reports.filter((r) => r.status === "published").length;
+  const activeClientsCount = data.clients.filter((c) => c.status === "Active").length;
+  const completedReportsCount = data.reports.filter((r) => r.status === "Complete").length;
 
   return (
     <div className="p-6">

@@ -51,11 +51,23 @@ interface DataContextType {
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Mocking implementation to fix types - state management logic remains same
   const [data, setData] = useState<ImaniData>({
     clients: [], metricDefinitions: [], monthlyMetrics: [], campaigns: [],
     wins: [], sectionTemplates: [], fullTemplates: [], reports: [],
-    agencyHq: { annualProfitGoal: 0, products: [], expenses: [] }
+    agencyHq: { 
+      overview: { 
+        name: "", 
+        description: "", 
+        location: { city: "", state: "", country: "" }, 
+        websiteUrl: "", 
+        foundingDate: "", 
+        employeeCount: 0, 
+        annualMarketingBudget: 0 
+      },
+      annualProfitGoal: 0, 
+      products: [], 
+      expenses: [] 
+    }
   });
 
   const h = {

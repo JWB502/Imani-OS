@@ -82,6 +82,7 @@ export function RoiBulkEntryDialog({
   }, [step, selectedYear, selectedMetricIds, client.id, data.monthlyMetrics, open]);
 
   const handleSave = () => {
+    const now = new Date().toISOString();
     const metricsToUpsert: Omit<MonthlyMetric, 'id'>[] = [];
 
     for (const [month, values] of Object.entries(bulkValues)) {
@@ -101,6 +102,8 @@ export function RoiBulkEntryDialog({
           clientId: client.id,
           month,
           values: numericValues,
+          createdAt: now,
+          updatedAt: now
         });
       }
     }

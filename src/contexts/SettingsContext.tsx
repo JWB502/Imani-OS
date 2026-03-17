@@ -15,6 +15,7 @@ const defaultSettings: AppSettings = {
 
 function coerceSettings(raw: Partial<AppSettings> | undefined): AppSettings {
   const base = raw ?? {};
+  
   const redactionStyle: AppSettings["redactionStyle"] =
     base.redactionStyle === "initial" ? "initial" : "iaid";
 

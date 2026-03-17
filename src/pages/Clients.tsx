@@ -63,6 +63,7 @@ const emptyDraft: ClientDraft = {
   status: "Lead",
   tags: [],
   serviceTypes: [],
+  totalLifetimeValue: 0,
   includeInRetention: true,
 };
 

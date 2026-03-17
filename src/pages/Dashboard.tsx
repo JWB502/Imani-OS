@@ -5,12 +5,12 @@ export default function Dashboard() {
   const { data } = useData();
 
   const activeClients = React.useMemo(
-    () => data.clients.filter((c) => c.status === "active").length,
+    () => data.clients.filter((c) => c.status === "Active").length,
     [data.clients]
   );
 
   const draftedReports = React.useMemo(
-    () => data.reports.filter((r) => r.status === "draft").length,
+    () => data.reports.filter((r) => r.status === "Draft").length,
     [data.reports]
   );
 
