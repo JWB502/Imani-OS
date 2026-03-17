@@ -422,8 +422,9 @@ export default function AgencyHq() {
                     </div>
                     <div className="flex justify-between items-center text-sm border-t pt-4">
                       <span className="text-muted-foreground">App Version</span>
-                      <Badge variant="outline" className="rounded-lg">v1.1</Badge>
+                      <Badge variant="outline" className="rounded-lg">v1.1.0</Badge>
                     </div>
+
                   </CardContent>
                 </Card>
               </div>
