@@ -1,283 +1,200 @@
-export type ID = string;
+export type UserRole = 'Admin' | 'Analyst' | 'Viewer';
 
-export type UserRole = "admin" | "editor";
-
-export type User = {
-  id: ID;
+export interface User {
+  id: string;
   name: string;
   email: string;
   role: UserRole;
-};
+  avatar?: string;
+}
 
-export type ClientStatus = "Lead" | "Active" | "Paused" | "Former";
+export interface AppSettings {
+  agencyName: string;
+  agencyLogo?: string;
+  primaryColor: string;
+  redactionStyle: 'block' | 'blur' | 'none';
+  pdfPageNumbers: boolean;
+  aiEnabled: boolean;
+}
 
-export type Client = {
-  id: ID;
+export type ClientStatus = 'active' | 'inactive' | 'Lead' | 'Paused';
+
+export interface Client {
+  id: string;
   name: string;
-  privacyId?: string;
+  status: 'active' | 'inactive'; // Kept for logic, but UI uses more
   organizationType?: string;
+  industry?: string;
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
-  dashboardUrl?: string;
-  pmUrl?: string;
-  crmUsed?: string;
-  status: ClientStatus;
-  startDate?: string; // YYYY-MM-DD
-  endDate?: string; // YYYY-MM-DD
-  notes?: string;
-  tags: string[];
-  serviceTypes: string[];
-  industry?: string;
   city?: string;
   state?: string;
+  country?: string;
+  zip?: string;
+  tags: string[];
+  serviceTypes: string[];
+  crmUsed?: string;
+  startDate?: string;
+  endDate?: string;
+  dashboardUrl?: string;
+  pmUrl?: string;
+  notes?: string;
+  internalContext?: string;
   monthlyRetainer?: number;
   oneTimeProjectValue?: number;
-  totalLifetimeValue?: number;
-  internalContext?: string;
+  totalLifetimeValue: number;
+  privacyId?: string;
   includeInAgencyImpact?: boolean;
   createdAt: string;
   updatedAt: string;
-};
+}
 
-export type WinCategory =
-  | "Visibility"
-  | "Operations"
-  | "Automation"
-  | "Revenue"
-  | "Donations"
-  | "Reviews"
-  | "Other";
+export type ManagementType = 'DFY' | 'DWY' | 'Consulting';
 
-export type Win = {
-  id: ID;
-  clientId: ID;
-  title: string;
-  description: string;
-  date: string; // YYYY-MM-DD
-  category: WinCategory;
-  beforeAfter?: string;
-  measurableResult?: string;
-  tags: string[];
-  caseStudyPotential: boolean;
-  linkedReportId?: ID;
-  linkedMetricMonth?: string; // YYYY-MM
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ReportStatus = "Draft" | "Complete";
-
-export type ChecklistItem = { id: ID; text: string; checked: boolean };
-export type KPIItem = { id: ID; name: string; value: string; unit?: string };
-
-export type SectionBlock =
-  | {
-      id: ID;
-      type: "richText";
-      label: string;
-      content: string;
-    }
-  | {
-      id: ID;
-      type: "checklist";
-      label: string;
-      items: ChecklistItem[];
-    }
-  | {
-      id: ID;
-      type: "score";
-      label: string;
-      value: number;
-      max: number;
-      note?: string;
-    }
-  | {
-      id: ID;
-      type: "kpi";
-      label: string;
-      items: KPIItem[];
-    }
-  | {
-      id: ID;
-      type: "table";
-      label: string;
-      columns: string[];
-      rows: string[][];
-    }
-  | {
-      id: ID;
-      type: "image";
-      label: string;
-      url: string;
-      caption?: string;
-    };
-
-export type SectionTemplate = {
-  id: ID;
+export interface CampaignResult {
+  id: string;
   name: string;
-  description?: string;
-  blocks: SectionBlock[];
-  archived: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
+  value: number;
+  label?: string;
+}
 
-export type FullTemplate = {
-  id: ID;
-  name: string;
-  description?: string;
-  sectionTemplateIds: ID[];
-  archived: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ReportSection = {
-  id: ID;
+export interface Campaign {
+  id: string;
+  clientId: string;
   title: string;
-  sectionTemplateId?: ID;
-  blocks: SectionBlock[];
-  internalNotes?: string;
-};
-
-export type Report = {
-  id: ID;
-  clientId: ID;
-  fullTemplateId?: ID;
-  title: string;
-  reportType: string;
-  createdAt: string;
-  reportingPeriod?: string; // e.g. 2026-02
-  status: ReportStatus;
-  analyst?: string;
-  internalNotes?: string;
-  executiveSummary?: string;
-  nextSteps?: string;
-  sections: ReportSection[];
-  pdfPageNumbers?: boolean;
-  updatedAt: string;
-};
-
-export type MetricDefinition = {
-  id: ID;
-  clientId: ID;
-  name: string;
-  unit?: string;
-  kind: "number" | "currency" | "percent";
-  locked?: boolean;
-  isStandard?: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type MonthlyMetric = {
-  id: ID;
-  clientId: ID;
-  month: string; // YYYY-MM
-  values: Record<ID, number>; // metricDefinitionId -> value
-  includeInAgencyImpact?: boolean;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CampaignResult = { id: ID; name: string; value: number; unit?: string };
-
-export type ManagementType = "DIY" | "DWY" | "DFY";
-
-export type Campaign = {
-  id: ID;
-  clientId: ID;
-  title?: string;
   channel: string;
   managementType: ManagementType;
-  startDate?: string; // YYYY-MM-DD
-  endDate?: string; // YYYY-MM-DD
-  budget?: number;
-  adSpend?: number;
-  income?: number;
-  results: CampaignResult[];
+  status: 'planned' | 'active' | 'completed';
+  startDate: string;
+  endDate?: string;
+  budget: number;
+  adSpend: number;
+  income: number;
   notes?: string;
+  results: CampaignResult[];
+  updatedAt: string;
+}
+
+export interface Win {
+  id: string;
+  clientId: string;
+  title: string;
+  description: string;
+  date: string;
+  category: string;
+  measurableResult?: string;
+  beforeAfter?: string;
+  tags: string[];
+  caseStudyPotential?: boolean;
+  linkedReportId?: string;
+}
+
+export interface SectionBlock {
+  id: string;
+  type: 'text' | 'kpis' | 'checklist' | 'image' | 'chart';
+  content: any;
+}
+
+export interface KPIItem {
+  id: string;
+  label: string;
+  value: string;
+  trend?: 'up' | 'down' | 'neutral';
+}
+
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export interface SectionTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  blocks: SectionBlock[];
+  archived?: boolean;
+  updatedAt: string;
+}
+
+export interface FullTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  sectionTemplateIds: string[];
+  archived?: boolean;
+  updatedAt: string;
+}
+
+export interface Report {
+  id: string;
+  clientId: string;
+  title: string;
+  reportType: string;
+  reportingPeriod: string;
+  status: 'draft' | 'published';
+  analyst?: string;
+  executiveSummary?: string;
+  nextSteps?: string;
+  internalNotes?: string;
+  pdfPageNumbers?: boolean;
+  sections: any[];
   createdAt: string;
   updatedAt: string;
-};
+}
 
-export type AppSettings = {
-  agencyName: string;
-  openAiApiKey?: string;
-  openRouterApiKey?: string;
-  aiProvider: "openai" | "openrouter";
-  openAiModel: string;
-  redactionStyle: "initial" | "iaid";
-  analysts: string[];
-  pdfPageNumbers: boolean;
-};
+export type ProductType = 'service' | 'product';
+export type PricingModel = 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'one-time';
+export type BillingCycle = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+export type ExpenseCategory = 'Software/SaaS' | 'Contractors' | 'Ad Spend' | 'Operations' | 'Other';
 
-export type AppData = {
-  clients: Client[];
-  wins: Win[];
-  campaigns: Campaign[];
-  sectionTemplates: SectionTemplate[];
-  fullTemplates: FullTemplate[];
-  reports: Report[];
-  metricDefinitions: MetricDefinition[];
-  monthlyMetrics: MonthlyMetric[];
-  agencyHq?: AgencyHq;
-};
-
-export type AgencyHq = {
-  overview: AgencyOverview;
-  products: AgencyProduct[];
-  expenses: AgencyExpense[];
-  annualProfitGoal?: number;
-};
-
-export type AgencyOverview = {
+export interface AgencyProduct {
+  id: string;
   name: string;
-  description: string;
-  location: {
-    city: string;
-    state: string;
-    country: string;
-  };
-  websiteUrl: string;
-  foundingDate: string;
-  employeeCount: number;
-  annualMarketingBudget: number;
-};
-
-export type PricingModel = "one-time" | "monthly" | "quarterly" | "semi-annually" | "annually";
-export type ProductType = "product" | "service";
-
-export type AgencyProduct = {
-  id: ID;
-  name: string;
-  description: string;
+  description?: string;
   type: ProductType;
   pricingModel: PricingModel;
   price: number;
-  activeClients: number; // For recurring revenue tracking
-  projectedSales: number; // For Goal & Projections
-};
+  activeClients: number;
+  projectedSales: number;
+}
 
-export type ExpenseCategory =
-  | "Software/SaaS"
-  | "Payroll"
-  | "Marketing"
-  | "Rent/Office"
-  | "Taxes"
-  | "Legal/Professional"
-  | "Other";
-
-export type BillingCycle = "monthly" | "quarterly" | "semi-annually" | "annually";
-
-export type AgencyExpense = {
-  id: ID;
+export interface AgencyExpense {
+  id: string;
   name: string;
-  description: string;
+  description?: string;
   category: ExpenseCategory;
   billingCycle: BillingCycle;
   cost: number;
-};
+}
+
+export interface AgencyHq {
+  overview?: {
+    name: string;
+    description: string;
+    location: { city: string; state: string };
+    websiteUrl: string;
+    foundingDate: string;
+    employeeCount: number;
+    annualMarketingBudget: number;
+  };
+  annualProfitGoal: number;
+  products: AgencyProduct[];
+  expenses: AgencyExpense[];
+}
+
+export interface ImaniData {
+  clients: Client[];
+  metricDefinitions: MetricDefinition[];
+  monthlyMetrics: MonthlyMetric[];
+  campaigns: Campaign[];
+  wins: Win[];
+  sectionTemplates: SectionTemplate[];
+  fullTemplates: FullTemplate[];
+  reports: Report[];
+  agencyHq: AgencyHq;
+}
+
+export type AppData = ImaniData; // Alias for legacy usage

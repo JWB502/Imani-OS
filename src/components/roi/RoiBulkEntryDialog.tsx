@@ -28,7 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useData } from "@/contexts/DataContext";
-import { Client, MetricDefinition } from "@/types/imani";
+import { Client, MetricDefinition, MonthlyMetric } from "@/types/imani";
 
 interface RoiBulkEntryDialogProps {
   open: boolean;
@@ -50,7 +50,7 @@ export function RoiBulkEntryDialog({
   client,
   metricDefs,
 }: RoiBulkEntryDialogProps) {
-  const { upsertMonthlyMetric, data } = useData();
+  const { bulkUpsertMonthlyMetrics, data } = useData();
   const [step, setStep] = React.useState<Step>("year");
   const [selectedYear, setSelectedYear] = React.useState(
     new Date().getFullYear().toString(),
@@ -64,7 +64,7 @@ export function RoiBulkEntryDialog({
 
   // Reset values when year/metrics change
   React.useEffect(() => {
-    if (step === "data") {
+    if (step === "data" && open) {
       const initial: Record<string, Record<string, string>> = {};
       for (let i = 1; i <= 12; i++) {
         const month = `${selectedYear}-${String(i).padStart(2, "0")}`;
@@ -79,13 +79,16 @@ export function RoiBulkEntryDialog({
       }
       setBulkValues(initial);
     }
-  }, [step, selectedYear, selectedMetricIds, client.id, data.monthlyMetrics]);
+  }, [step, selectedYear, selectedMetricIds, client.id, data.monthlyMetrics, open]);
 
   const handleSave = () => {
+    const metricsToUpsert: Omit<MonthlyMetric, 'id'>[] = [];
+
     for (const [month, values] of Object.entries(bulkValues)) {
       const numericValues: Record<string, number> = {};
       let hasValue = false;
       for (const [mid, val] of Object.entries(values)) {
+        if (val.trim() === "") continue;
         const n = parseFloat(val);
         if (!isNaN(n)) {
           numericValues[mid] = n;
@@ -94,19 +97,18 @@ export function RoiBulkEntryDialog({
       }
 
       if (hasValue) {
-        const existing = data.monthlyMetrics.find(
-          (m) => m.clientId === client.id && m.month === month,
-        );
-        upsertMonthlyMetric({
+        metricsToUpsert.push({
           clientId: client.id,
           month,
-          values: {
-            ...(existing?.values || {}),
-            ...numericValues,
-          },
+          values: numericValues,
         });
       }
     }
+
+    if (metricsToUpsert.length > 0) {
+      bulkUpsertMonthlyMetrics(metricsToUpsert);
+    }
+    
     onOpenChange(false);
     setStep("year");
   };
