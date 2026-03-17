@@ -7,7 +7,7 @@ const SETTINGS_KEY = "imani-os:settings:v1";
 export type BackupPayloadV1 = {
   version: 1;
   exportedAt: string;
-  settings: Omit<AppSettings, "openAiApiKey">;
+  settings: Omit<AppSettings, "openAiApiKey" | "openRouterApiKey">;
   data: AppData;
 };
 
@@ -23,7 +23,7 @@ function isBool(v: unknown): v is boolean {
   return typeof v === "boolean";
 }
 
-function validateAppSettings(v: unknown): Omit<AppSettings, "openAiApiKey"> {
+function validateAppSettings(v: unknown): Omit<AppSettings, "openAiApiKey" | "openRouterApiKey"> {
   if (!isObject(v)) throw new Error("Invalid backup: settings must be an object.");
 
   const agencyName = v.agencyName;
@@ -31,6 +31,7 @@ function validateAppSettings(v: unknown): Omit<AppSettings, "openAiApiKey"> {
   const analysts = v.analysts;
   const pdfPageNumbers = v.pdfPageNumbers;
   const redactionStyle = v.redactionStyle;
+  const aiProvider = v.aiProvider;
 
   if (typeof agencyName !== "string") {
     throw new Error("Invalid backup: settings.agencyName must be a string.");
@@ -49,6 +50,9 @@ function validateAppSettings(v: unknown): Omit<AppSettings, "openAiApiKey"> {
       "Invalid backup: settings.redactionStyle must be 'iaid' or 'initial'.",
     );
   }
+  if (aiProvider !== "openai" && aiProvider !== "openrouter") {
+    throw new Error("Invalid backup: settings.aiProvider must be 'openai' or 'openrouter'.");
+  }
 
   return {
     agencyName,
@@ -56,6 +60,7 @@ function validateAppSettings(v: unknown): Omit<AppSettings, "openAiApiKey"> {
     analysts,
     pdfPageNumbers,
     redactionStyle,
+    aiProvider,
   };
 }
 
@@ -115,7 +120,7 @@ export function exportBackup(): { filename: string; content: string } {
     throw new Error("Nothing to export yet.");
   }
 
-  const { openAiApiKey: _openAiApiKey, ...settingsNoKey } = settings;
+  const { openAiApiKey: _oa, openRouterApiKey: _or, ...settingsNoKey } = settings;
 
   const payload: BackupPayloadV1 = {
     version: 1,
@@ -134,11 +139,13 @@ export async function importBackup(json: unknown): Promise<void> {
 
   const existing = readJson<AppSettings>(SETTINGS_KEY);
   const openAiApiKey = existing?.openAiApiKey;
+  const openRouterApiKey = existing?.openRouterApiKey;
 
-  // Always exclude API keys from backups — retain local key.
+  // Always exclude API keys from backups — retain local keys.
   const nextSettings: AppSettings = {
     ...payload.settings,
     openAiApiKey,
+    openRouterApiKey,
   };
 
   writeJson(DATA_KEY, payload.data);

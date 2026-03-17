@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2 } from "lucide-react";
+import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2, ExternalLink } from "lucide-react";
 
 import { CampaignsTab } from "@/components/campaigns/CampaignsTab";
 import { SoftButton } from "@/components/app/SoftButton";
@@ -24,6 +24,24 @@ export default function ClientDetail() {
   const reports = data.reports.filter((r) => r.clientId === id);
   const wins = data.wins.filter((w) => w.clientId === id);
   const monthly = data.monthlyMetrics.filter((m) => m.clientId === id);
+
+  const [notesDraft, setNotesDraft] = React.useState({
+    notes: client?.notes ?? "",
+    internalContext: client?.internalContext ?? "",
+  });
+
+  const hasNotesChanges =
+    notesDraft.notes !== (client?.notes ?? "") ||
+    notesDraft.internalContext !== (client?.internalContext ?? "");
+
+  React.useEffect(() => {
+    if (client) {
+      setNotesDraft({
+        notes: client.notes ?? "",
+        internalContext: client.internalContext ?? "",
+      });
+    }
+  }, [client?.id]); // Reset only when client changes
 
   const attachments = React.useMemo(() => {
     const out: Array<{
@@ -117,6 +135,13 @@ export default function ClientDetail() {
 
   const includeInAgencyImpact = client.includeInAgencyImpact ?? true;
 
+  function saveNotes() {
+    updateClient(client!.id, {
+      notes: notesDraft.notes,
+      internalContext: notesDraft.internalContext,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -166,15 +191,50 @@ export default function ClientDetail() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
-              <div className="text-xs text-muted-foreground">Primary contact</div>
-              <div className="mt-1 font-medium">
-                {client.contactName || "—"}
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Primary contact</div>
+              <div className="space-y-1">
+                <div className="font-medium">
+                  {client.contactName || "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {client.contactEmail || "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {client.contactPhone || "—"}
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {client.contactEmail || "—"}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {client.contactPhone || "—"}
+
+              <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
+                {client.website && (
+                  <a
+                    href={client.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-[color:var(--im-secondary)] hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Website
+                  </a>
+                )}
+                {client.dashboardUrl && (
+                  <a
+                    href={client.dashboardUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-[color:var(--im-secondary)] hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Data Dashboard
+                  </a>
+                )}
+                {client.pmUrl && (
+                  <a
+                    href={client.pmUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-[color:var(--im-secondary)] hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Project Management
+                  </a>
+                )}
               </div>
             </div>
             <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
@@ -466,15 +526,20 @@ export default function ClientDetail() {
 
         <TabsContent value="notes" className="mt-4">
           <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Internal notes</CardTitle>
+              {hasNotesChanges && (
+                <Button onClick={saveNotes} size="sm" className="rounded-xl">
+                  Save Notes
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
                 <div className="text-sm font-medium">General notes</div>
                 <Textarea
-                  value={client.notes ?? ""}
-                  onChange={(e) => updateClient(client.id, { notes: e.target.value })}
+                  value={notesDraft.notes}
+                  onChange={(e) => setNotesDraft((p) => ({ ...p, notes: e.target.value }))}
                   className="mt-2 min-h-28 rounded-2xl bg-white/70"
                   placeholder="Meeting notes, constraints, context…"
                 />
@@ -482,17 +547,19 @@ export default function ClientDetail() {
               <div>
                 <div className="text-sm font-medium">Relationships / context</div>
                 <Textarea
-                  value={client.internalContext ?? ""}
+                  value={notesDraft.internalContext}
                   onChange={(e) =>
-                    updateClient(client.id, { internalContext: e.target.value })
+                    setNotesDraft((p) => ({ ...p, internalContext: e.target.value }))
                   }
                   className="mt-2 min-h-28 rounded-2xl bg-white/70"
                   placeholder="Things the team should remember…"
                 />
               </div>
-              <div className="text-xs text-muted-foreground">
-                Autosaved.
-              </div>
+              {!hasNotesChanges && (
+                <div className="text-xs text-muted-foreground">
+                  No unsaved changes.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

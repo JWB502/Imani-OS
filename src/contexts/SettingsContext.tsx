@@ -7,6 +7,7 @@ const SETTINGS_KEY = "imani-os:settings:v1";
 const defaultSettings: AppSettings = {
   agencyName: "Imani Advantage",
   openAiModel: "gpt-4o-mini",
+  aiProvider: "openai",
   redactionStyle: "iaid",
   analysts: ["Imani Analyst"],
   pdfPageNumbers: true,
@@ -17,10 +18,14 @@ function coerceSettings(raw: Partial<AppSettings> | undefined): AppSettings {
   const redactionStyle: AppSettings["redactionStyle"] =
     base.redactionStyle === "initial" ? "initial" : "iaid";
 
+  const aiProvider: AppSettings["aiProvider"] =
+    base.aiProvider === "openrouter" ? "openrouter" : "openai";
+
   return {
     ...defaultSettings,
     ...base,
     redactionStyle,
+    aiProvider,
     analysts: Array.isArray(base.analysts) ? base.analysts : defaultSettings.analysts,
     pdfPageNumbers:
       typeof base.pdfPageNumbers === "boolean"

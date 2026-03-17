@@ -442,8 +442,9 @@ export default function ReportBuilder() {
   }
 
   async function runAi() {
-    if (!settings.openAiApiKey) {
-      toast({ title: "Add your OpenAI API key in Settings to use AI tools." });
+    const key = settings.aiProvider === "openrouter" ? settings.openRouterApiKey : settings.openAiApiKey;
+    if (!key) {
+      toast({ title: `Add your ${settings.aiProvider === "openrouter" ? "Open Router" : "OpenAI"} API key in Settings to use AI tools.` });
       return;
     }
 
@@ -474,8 +475,9 @@ export default function ReportBuilder() {
       const sanitizedPrompt = sanitizeForAI({ report, client, settings, prompt });
 
       const out = await runOpenAiChat({
-        apiKey: settings.openAiApiKey,
+        apiKey: settings.aiProvider === "openrouter" ? settings.openRouterApiKey! : settings.openAiApiKey,
         model: settings.openAiModel,
+        provider: settings.aiProvider,
         system,
         user: sanitizedPrompt,
       });
@@ -510,7 +512,7 @@ export default function ReportBuilder() {
     await exportElementToPdf({
       element: el,
       fileName: `${client.name} — ${report.title}.pdf`,
-      pageNumbers: settings.pdfPageNumbers,
+      pageNumbers: report.pdfPageNumbers ?? settings.pdfPageNumbers,
     });
   }
 
@@ -532,14 +534,14 @@ export default function ReportBuilder() {
         <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
-            className="rounded-2xl bg-white/70"
+            className="rounded-2xl bg-white ring-1 ring-border/50"
             onClick={() => setAiOpen(true)}
           >
             <Sparkles className="mr-2 h-4 w-4" /> AI assist
           </Button>
           <Button
             variant="secondary"
-            className="rounded-2xl bg-white/70"
+            className="rounded-2xl bg-white ring-1 ring-border/50"
             onClick={() => {
               const dupe = duplicateReport(report.id);
               if (!dupe) return;
@@ -551,7 +553,7 @@ export default function ReportBuilder() {
           </Button>
           <Button
             variant="secondary"
-            className="rounded-2xl bg-white/70"
+            className="rounded-2xl bg-white ring-1 ring-border/50"
             onClick={exportPdf}
           >
             <Download className="mr-2 h-4 w-4" /> Export PDF
@@ -684,6 +686,19 @@ export default function ReportBuilder() {
                     <SelectItem value="Complete">Complete</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 md:col-span-2 rounded-2xl border border-border/60 bg-white/70 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Show PDF Page Numbers</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Toggle page numbers for this specific report's export.
+                  </p>
+                </div>
+                <Switch
+                  checked={report.pdfPageNumbers ?? settings.pdfPageNumbers}
+                  onCheckedChange={(checked) => updateReport(report.id, { pdfPageNumbers: checked })}
+                />
               </div>
             </CardContent>
           </Card>

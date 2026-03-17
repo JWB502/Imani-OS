@@ -145,6 +145,8 @@ export default function Clients() {
       status: client.status,
       startDate: client.startDate,
       endDate: client.endDate,
+      dashboardUrl: client.dashboardUrl,
+      pmUrl: client.pmUrl,
       notes: client.notes,
       tags: client.tags,
       serviceTypes: client.serviceTypes,
@@ -422,6 +424,42 @@ export default function Clients() {
                     }
                     className="h-11 rounded-2xl"
                     type="email"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Website URL</Label>
+                  <Input
+                    value={draft.website ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, website: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Data Dashboard URL</Label>
+                  <Input
+                    value={draft.dashboardUrl ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, dashboardUrl: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Project Management URL</Label>
+                  <Input
+                    value={draft.pmUrl ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, pmUrl: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="https://..."
                   />
                 </div>
 

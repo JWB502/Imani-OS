@@ -20,6 +20,8 @@ export type Client = {
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
+  dashboardUrl?: string;
+  pmUrl?: string;
   crmUsed?: string;
   status: ClientStatus;
   startDate?: string; // YYYY-MM-DD
@@ -154,6 +156,7 @@ export type Report = {
   executiveSummary?: string;
   nextSteps?: string;
   sections: ReportSection[];
+  pdfPageNumbers?: boolean;
   updatedAt: string;
 };
 
@@ -204,6 +207,8 @@ export type Campaign = {
 export type AppSettings = {
   agencyName: string;
   openAiApiKey?: string;
+  openRouterApiKey?: string;
+  aiProvider: "openai" | "openrouter";
   openAiModel: string;
   redactionStyle: "initial" | "iaid";
   analysts: string[];

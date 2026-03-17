@@ -20,7 +20,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -42,6 +44,13 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings();
 
   const [analysts, setAnalysts] = React.useState(settings.analysts.join(", "));
+  const [aiDraft, setAiDraft] = React.useState({
+    openAiApiKey: settings.openAiApiKey ?? "",
+    openRouterApiKey: settings.openRouterApiKey ?? "",
+    openAiModel: settings.openAiModel,
+    aiProvider: settings.aiProvider,
+  });
+
   const [importCandidate, setImportCandidate] = React.useState<
     | { raw: unknown; summary: { clients: number; reports: number; exportedAt: string } }
     | null
@@ -58,6 +67,31 @@ export default function Settings() {
   React.useEffect(() => {
     setAnalysts(settings.analysts.join(", "));
   }, [settings.analysts]);
+
+  React.useEffect(() => {
+    setAiDraft({
+      openAiApiKey: settings.openAiApiKey ?? "",
+      openRouterApiKey: settings.openRouterApiKey ?? "",
+      openAiModel: settings.openAiModel,
+      aiProvider: settings.aiProvider,
+    });
+  }, [settings.openAiApiKey, settings.openRouterApiKey, settings.openAiModel, settings.aiProvider]);
+
+  const hasAiChanges =
+    aiDraft.openAiApiKey !== (settings.openAiApiKey ?? "") ||
+    aiDraft.openRouterApiKey !== (settings.openRouterApiKey ?? "") ||
+    aiDraft.openAiModel !== settings.openAiModel ||
+    aiDraft.aiProvider !== settings.aiProvider;
+
+  function saveAiConfig() {
+    updateSettings({
+      openAiApiKey: aiDraft.openAiApiKey || undefined,
+      openRouterApiKey: aiDraft.openRouterApiKey || undefined,
+      openAiModel: aiDraft.openAiModel,
+      aiProvider: aiDraft.aiProvider,
+    });
+    toast({ title: "AI configuration saved." });
+  }
 
   React.useEffect(() => {
     if (!isTauri()) return;
@@ -95,32 +129,66 @@ export default function Settings() {
         </Card>
 
         <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" /> AI assistance
+              <Sparkles className="h-4 w-4 text-primary" /> AI configuration
             </CardTitle>
+            {hasAiChanges && (
+              <Button onClick={saveAiConfig} size="sm" className="rounded-xl">
+                Save AI Config
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2 md:col-span-2">
-              <Label>OpenAI API key</Label>
-              <Input
-                value={settings.openAiApiKey ?? ""}
-                onChange={(e) => updateSettings({ openAiApiKey: e.target.value || undefined })}
-                type="password"
-                className="h-11 rounded-2xl bg-white/70"
-                placeholder="sk-..."
-              />
-              <div className="text-xs text-muted-foreground">
-                Stored locally in your browser. Recommended for internal-only use.
-              </div>
+              <Label>Provider</Label>
+              <RadioGroup
+                value={aiDraft.aiProvider}
+                onValueChange={(v) => setAiDraft((p) => ({ ...p, aiProvider: v as any }))}
+                className="flex gap-4 mt-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="openai" id="r1" />
+                  <Label htmlFor="r1" className="cursor-pointer font-normal">OpenAI</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="openrouter" id="r2" />
+                  <Label htmlFor="r2" className="cursor-pointer font-normal">Open Router</Label>
+                </div>
+              </RadioGroup>
             </div>
+
+            {aiDraft.aiProvider === "openai" ? (
+              <div className="grid gap-2 md:col-span-2">
+                <Label>OpenAI API key</Label>
+                <Input
+                  value={aiDraft.openAiApiKey}
+                  onChange={(e) => setAiDraft((p) => ({ ...p, openAiApiKey: e.target.value }))}
+                  type="password"
+                  className="h-11 rounded-2xl bg-white/70"
+                  placeholder="sk-..."
+                />
+              </div>
+            ) : (
+              <div className="grid gap-2 md:col-span-2">
+                <Label>Open Router API key</Label>
+                <Input
+                  value={aiDraft.openRouterApiKey}
+                  onChange={(e) => setAiDraft((p) => ({ ...p, openRouterApiKey: e.target.value }))}
+                  type="password"
+                  className="h-11 rounded-2xl bg-white/70"
+                  placeholder="sk-or-v1-..."
+                />
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label>Model</Label>
               <Input
-                value={settings.openAiModel}
-                onChange={(e) => updateSettings({ openAiModel: e.target.value })}
+                value={aiDraft.openAiModel}
+                onChange={(e) => setAiDraft((p) => ({ ...p, openAiModel: e.target.value }))}
                 className="h-11 rounded-2xl bg-white/70"
-                placeholder="gpt-4o-mini"
+                placeholder={aiDraft.aiProvider === "openai" ? "gpt-4o-mini" : "openai/gpt-4o-mini"}
               />
             </div>
             <div className="grid gap-2">
@@ -344,27 +412,48 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Danger zone</CardTitle>
+      <Card className="rounded-3xl border-destructive/30 bg-destructive/5 shadow-sm overflow-hidden">
+        <CardHeader className="bg-destructive/10">
+          <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between py-6">
           <div>
-            <div className="text-sm font-medium">Reset demo data</div>
-            <div className="text-sm text-muted-foreground">
-              Restores sample client + template preload set.
+            <div className="text-sm font-semibold text-destructive">Reset demo data</div>
+            <div className="text-sm text-destructive/80">
+              Restores sample client + template preload set. This will delete all your current work!
             </div>
           </div>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() => {
-              if (!confirm("Reset all app data to the initial demo set?")) return;
-              resetToSeed();
-              toast({ title: "Demo data restored." });
-            }}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" /> Reset
-          </SoftButton>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="rounded-2xl"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" /> Reset Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-3xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will PERMANENTLY delete all clients, reports, ROI data, and campaigns, and restore the demo dataset.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    resetToSeed();
+                    toast({ title: "Demo data restored." });
+                  }}
+                >
+                  Yes, reset everything
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 

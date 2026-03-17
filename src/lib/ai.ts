@@ -3,13 +3,26 @@ export async function runOpenAiChat(opts: {
   model: string;
   system: string;
   user: string;
+  provider?: "openai" | "openrouter";
 }) {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const isRouter = opts.provider === "openrouter";
+  const url = isRouter
+    ? "https://openrouter.ai/api/v1/chat/completions"
+    : "https://api.openai.com/v1/chat/completions";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${opts.apiKey}`,
+  };
+
+  if (isRouter) {
+    headers["HTTP-Referer"] = "https://imani-os.example.com"; // Required for OpenRouter
+    headers["X-Title"] = "Imani OS";
+  }
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.apiKey}`,
-    },
+    headers,
     body: JSON.stringify({
       model: opts.model,
       messages: [
@@ -22,13 +35,13 @@ export async function runOpenAiChat(opts: {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `OpenAI request failed (${res.status})`);
+    throw new Error(text || `AI request failed (${res.status})`);
   }
 
   const data = (await res.json()) as any;
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
-    throw new Error("Unexpected OpenAI response.");
+    throw new Error("Unexpected AI response.");
   }
   return content.trim();
 }
