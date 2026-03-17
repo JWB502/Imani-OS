@@ -1,4 +1,4 @@
-' in JSX to fix TS1002/TS1382.">
+' in JSX.">
 import * as React from "react";
 import {
   FileText,
@@ -482,8 +482,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                 <div className="rounded-3xl border border-border/70 bg-white/70 p-6">
                   <div className="text-sm font-semibold">Campaign Results</div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Track outcomes for this campaign. Use Metric, Value, and Unit (optional).
-                    Examples: Leads, Calls, Sign-ups, Bookings.
+                    Track outcomes for this campaign. Use Metric, Value, and Unit
+                    (optional). Examples: Leads, Calls, Sign-ups, Bookings.
                   </div>
 
                   <div className="mt-6 grid grid-cols-12 gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
@@ -506,7 +506,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                                 ),
                               )
                             }
-                            placeholder={idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"}
+                            placeholder={
+                              idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"
+                            }
                             aria-label="Result metric name"
                             className="h-10 rounded-2xl bg-white/80"
                           />
@@ -607,7 +609,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                   <AlertDialogContent className="rounded-3xl border-border/70 bg-white/90 backdrop-blur">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                      <AlertDialogDescription>
+                        This cannot be undone.
+                      </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
