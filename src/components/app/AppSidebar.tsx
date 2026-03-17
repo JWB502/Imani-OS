@@ -3,6 +3,7 @@ import {
   Building2,
   FileText,
   LayoutDashboard,
+  LogOut,
   Settings,
   Sparkles,
   Tags,
@@ -82,22 +83,35 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <div className="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
-          <div className="text-xs text-sidebar-foreground/70">Signed in</div>
-          <div className="mt-0.5 text-sm font-medium leading-tight">
-            {user?.name ?? "—"}
+        <div className="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+          <div className="group-data-[collapsible=icon]:hidden">
+            <div className="text-xs text-sidebar-foreground/70">Signed in</div>
+            <div className="mt-0.5 text-sm font-medium leading-tight">
+              {user?.name ?? "—"}
+            </div>
+            <div className="text-xs text-sidebar-foreground/70 truncate max-w-[150px]">
+              {user?.email}
+            </div>
           </div>
-          <div className="text-xs text-sidebar-foreground/70">{user?.email}</div>
           <Button
             variant="secondary"
             size="sm"
-            className="mt-3 w-full rounded-xl bg-white/10 text-sidebar-foreground hover:bg-white/15"
+            className={cn(
+              "mt-3 w-full rounded-xl bg-white/10 text-sidebar-foreground hover:bg-white/15",
+              "group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:p-0"
+            )}
             onClick={logout}
+            title="Log out"
           >
-            Log out
+            <span className="group-data-[collapsible=icon]:hidden">Log out</span>
+            <div className="hidden group-data-[collapsible=icon]:block">
+              <LogOut className="h-4 w-4" />
+            </div>
           </Button>
+
         </div>
       </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   );

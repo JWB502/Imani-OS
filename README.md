@@ -1,19 +1,24 @@
 # Imani OS
 
-A privacy-first, local-first agency reporting tool built with React + TypeScript.
+Imani OS is a comprehensive operations workspace designed for digital marketing agencies. It centralizes client management, ROI tracking, campaign monitoring, and agency-level financial projections into a single, high-performance desktop application.
 
-## Desktop (Tauri)
+## Key Features
 
-This repo includes a Tauri desktop shell under `src-tauri/`.
+- **Agency HQ**: Track your agency profile, offerings, recurring expenses, and profitability.
+- **ROI Dashboard**: Monitor client performance with automated ROI calculations based on revenue and expenses.
+- **Campaign Tracking**: Manage ad-hoc and recurring marketing campaigns across multiple channels.
+- **Report Builder**: Generate professional agency reports using modular templates and AI-powered insights.
+- **Wins Log**: Document and categorize client success stories for case studies and retention.
+- **Agency Impact**: Aggregate performance data across all clients to visualize your agency's collective impact.
 
-- Targets: **Windows (NSIS/MSI)** and **macOS (DMG)**
-- Enabled native APIs: **file dialogs + filesystem** (used for JSON backup import/export)
-- CSP is set to allow outbound calls only to `https://api.openai.com` for AI features.
+## Tech Stack
 
-### Notes
+- **Frontend**: React, TypeScript, Tailwind CSS, Shadcn/UI
+- **Native Core**: Tauri (Rust)
+- **State Management**: React Context with persistent local storage
+- **Icons**: Lucide React
+- **Charts**: Recharts
 
-- Backups **never include** your OpenAI API key; imports keep your existing local API key.
-- If you hit strange desktop build/runtime issues, try:
-  - <dyad-command type="restart"></dyad-command>
-  - <dyad-command type="rebuild"></dyad-command>
-  Look for the action button above the chat input.
+## Development
+
+Built with high-performance modern web technologies and wrapped in Tauri for a native desktop experience.
