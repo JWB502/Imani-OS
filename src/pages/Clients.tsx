@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import type { Client, ClientStatus } from "@/types/imani";
+import { INDUSTRIES } from "@/types/imani";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +159,10 @@ export default function Clients() {
       oneTimeProjectValue: client.oneTimeProjectValue,
       totalLifetimeValue: client.totalLifetimeValue,
       internalContext: client.internalContext,
+      // Time-Cost Analysis
+      enableTimeCostAnalysis: client.enableTimeCostAnalysis,
+      avgHoursSavedPerMonth: client.avgHoursSavedPerMonth,
+      hourlyValue: client.hourlyValue,
       // Existing clients default to being included in retention
       includeInRetention: true,
     });
@@ -402,8 +407,27 @@ export default function Clients() {
                       setDraft((p) => ({ ...p, organizationType: e.target.value }))
                     }
                     className="h-11 rounded-2xl"
-                    placeholder="Nonprofit, local service business…"
+                    placeholder="e.g. 501(c)(3), LLC"
                   />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Industry</Label>
+                  <Select
+                    value={draft.industry ?? ""}
+                    onValueChange={(v) => setDraft((p) => ({ ...p, industry: v }))}
+                  >
+                    <SelectTrigger className="h-11 rounded-2xl">
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDUSTRIES.map((ind) => (
+                        <SelectItem key={ind} value={ind}>
+                          {ind}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid gap-2">
@@ -620,6 +644,75 @@ export default function Clients() {
                       )}
                     />
                   </button>
+                </div>
+
+                {/* TIME-COST ANALYSIS SECTION */}
+                <div className="md:col-span-2 mt-4 space-y-4">
+                  <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-indigo-50/30 px-4 py-3">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold text-indigo-900">
+                        Time-Cost Analysis
+                      </div>
+                      <p className="text-xs text-indigo-700/70">
+                        Measure monetary value of time saved for this client.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((p) => ({
+                          ...p,
+                          enableTimeCostAnalysis: !p.enableTimeCostAnalysis,
+                        }))
+                      }
+                      className={cn(
+                        "relative inline-flex h-7 w-12 items-center rounded-full border transition-colors",
+                        draft.enableTimeCostAnalysis
+                          ? "bg-indigo-600 border-indigo-600"
+                          : "bg-muted border-border",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                          draft.enableTimeCostAnalysis
+                            ? "translate-x-6"
+                            : "translate-x-1",
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {draft.enableTimeCostAnalysis && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl border border-indigo-100 bg-white shadow-sm animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground uppercase">Avg Hours Saved / Mo</Label>
+                        <Input
+                          type="number"
+                          value={draft.avgHoursSavedPerMonth ?? ""}
+                          onChange={(e) => setDraft(p => ({ ...p, avgHoursSavedPerMonth: Number(e.target.value) }))}
+                          placeholder="0"
+                          className="h-10 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground uppercase">Value of an Hour ($)</Label>
+                        <Input
+                          type="number"
+                          value={draft.hourlyValue ?? ""}
+                          onChange={(e) => setDraft(p => ({ ...p, hourlyValue: Number(e.target.value) }))}
+                          placeholder="0.00"
+                          className="h-10 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground uppercase">Monthly Savings</Label>
+                        <div className="h-10 flex items-center px-3 rounded-xl bg-indigo-50 text-indigo-700 font-bold border border-indigo-100/50">
+                          {formatCurrency((draft.avgHoursSavedPerMonth || 0) * (draft.hourlyValue || 0))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>

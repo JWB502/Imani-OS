@@ -7,7 +7,9 @@ import {
   TrendingUp, 
   DollarSign, 
   Zap,
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  Clock,
+  Banknote
 } from "lucide-react";
 import { 
   LineChart, 
@@ -21,6 +23,7 @@ import {
   Area
 } from "recharts";
 import { useData } from "@/contexts/DataContext";
+import { INDUSTRIES } from "@/types/imani";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency, formatNumber } from "@/lib/format";
 
@@ -75,6 +78,16 @@ export default function Impact() {
       };
     }).slice(-12); // Last 12 months
   }, [data.monthlyMetrics, totalFees, data.metricDefinitions]);
+
+  // 6. Time-Cost Analysis Aggregates
+  const timeCostClients = data.clients.filter(c => c.enableTimeCostAnalysis && c.status === "Active");
+  const totalMonthlyHoursSaved = timeCostClients.reduce((sum, c) => sum + (c.avgHoursSavedPerMonth || 0), 0);
+  const totalMonthlyValueSaved = timeCostClients.reduce((sum, c) => sum + ((c.avgHoursSavedPerMonth || 0) * (c.hourlyValue || 0)), 0);
+  
+  const avgHoursPerClient = timeCostClients.length > 0 ? totalMonthlyHoursSaved / timeCostClients.length : 0;
+  const weeklyHoursSaved = totalMonthlyHoursSaved / 4;
+  const weeklyValueSaved = totalMonthlyValueSaved / 4;
+  const avgValuePerClient = timeCostClients.length > 0 ? totalMonthlyValueSaved / timeCostClients.length : 0;
 
   const highlights = [
     { label: "Revenue Tracked", value: formatCurrency(revenueMetrics), icon: DollarSign, color: "text-emerald-600", description: "Aggregate client revenue generated" },
@@ -211,6 +224,65 @@ export default function Impact() {
         </Card>
       </div>
 
+      {/* Time-Cost Analysis Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-indigo-600" />
+          <h2 className="text-xl font-bold text-[color:var(--im-navy)]">Time-Cost Analysis</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="rounded-3xl border-indigo-100 bg-indigo-50/30 shadow-sm overflow-hidden border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-indigo-900 uppercase tracking-wider">Hours Saved</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <div className="text-3xl font-bold text-indigo-700">{formatNumber(totalMonthlyHoursSaved)}</div>
+                  <div className="text-xs text-indigo-600/70">Total Monthly Hours</div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-indigo-100/50">
+                  <div>
+                    <div className="text-lg font-semibold text-indigo-700">{formatNumber(weeklyHoursSaved)}</div>
+                    <div className="text-[10px] text-indigo-600/70 uppercase">Weekly</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-indigo-700">{formatNumber(avgHoursPerClient)}</div>
+                    <div className="text-[10px] text-indigo-600/70 uppercase">Avg / Client</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-emerald-100 bg-emerald-50/30 shadow-sm overflow-hidden border-2 md:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-900 uppercase tracking-wider">Monetary Value Saved</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
+                <div>
+                  <div className="text-4xl font-bold text-emerald-700">{formatCurrency(totalMonthlyValueSaved)}</div>
+                  <div className="text-xs text-emerald-600/70 font-medium">Aggregate Monthly Efficiency Savings</div>
+                </div>
+                <div className="flex gap-8 px-6 py-4 rounded-2xl bg-white/50 border border-emerald-100/50">
+                  <div>
+                    <div className="text-xl font-bold text-emerald-700">{formatCurrency(weeklyValueSaved)}</div>
+                    <div className="text-[10px] text-emerald-600/70 uppercase font-bold tracking-tight">Weekly Value</div>
+                  </div>
+                  <div className="w-px h-10 bg-emerald-100" />
+                  <div>
+                    <div className="text-xl font-bold text-emerald-700">{formatCurrency(avgValuePerClient)}</div>
+                    <div className="text-[10px] text-emerald-600/70 uppercase font-bold tracking-tight">Avg Value / Client</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="rounded-3xl border-border/50 bg-white/70 shadow-sm overflow-hidden">
           <CardHeader>
@@ -253,14 +325,15 @@ export default function Impact() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {Array.from(new Set(data.clients.map(c => c.industry || "General"))).map(industry => {
-                const count = data.clients.filter(c => (c.industry || "General") === industry).length;
+              {INDUSTRIES.map(industry => {
+                const count = data.clients.filter(c => c.industry === industry).length;
+                if (count === 0) return null;
                 const percentage = (count / data.clients.length) * 100;
                 return (
                   <div key={industry} className="space-y-1.5">
                     <div className="flex justify-between text-sm font-medium">
                       <span>{industry}</span>
-                      <span className="text-muted-foreground">{count} clients</span>
+                      <span className="text-muted-foreground">{count} clients ({Math.round(percentage)}%)</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-primary" style={{ width: `${percentage}%` }} />
@@ -268,6 +341,23 @@ export default function Impact() {
                   </div>
                 );
               })}
+              {/* Fallback for "Other/General" not in preset list */}
+              {(() => {
+                const untracked = data.clients.filter(c => !c.industry || !INDUSTRIES.includes(c.industry as any));
+                if (untracked.length === 0) return null;
+                const percentage = (untracked.length / data.clients.length) * 100;
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>General / Other</span>
+                      <span className="text-muted-foreground">{untracked.length} clients ({Math.round(percentage)}%)</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-400" style={{ width: `${percentage}%` }} />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

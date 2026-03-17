@@ -20,6 +20,23 @@ export interface AppSettings {
 
 export type ClientStatus = "Lead" | "Active" | "Paused" | "Former";
 
+export const INDUSTRIES = [
+  "Nonprofit",
+  "Technology",
+  "Healthcare",
+  "Education",
+  "Real Estate",
+  "Finance",
+  "Retail",
+  "Manufacturing",
+  "Legal",
+  "Hospitality",
+  "E-commerce",
+  "Marketing/Media",
+  "Local Service Business",
+  "Other"
+] as const;
+
 export interface Client {
   id: string;
   name: string;
@@ -43,6 +60,12 @@ export interface Client {
   oneTimeProjectValue?: number;
   totalLifetimeValue: number;
   includeInAgencyImpact?: boolean;
+
+  // Time-Cost Analysis
+  enableTimeCostAnalysis?: boolean;
+  avgHoursSavedPerMonth?: number;
+  hourlyValue?: number;
+
   notes?: string;
   internalContext?: string;
   privacyId?: string;
