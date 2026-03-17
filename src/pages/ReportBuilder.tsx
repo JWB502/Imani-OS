@@ -533,15 +533,15 @@ export default function ReportBuilder() {
 
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="secondary"
-            className="rounded-2xl bg-white ring-1 ring-border/50"
+            variant="outline"
+            className="rounded-2xl border-border bg-white shadow-sm hover:bg-slate-50"
             onClick={() => setAiOpen(true)}
           >
-            <Sparkles className="mr-2 h-4 w-4" /> AI assist
+            <Sparkles className="mr-2 h-4 w-4 text-primary" /> AI assist
           </Button>
           <Button
-            variant="secondary"
-            className="rounded-2xl bg-white ring-1 ring-border/50"
+            variant="outline"
+            className="rounded-2xl border-border bg-white shadow-sm hover:bg-slate-50"
             onClick={() => {
               const dupe = duplicateReport(report.id);
               if (!dupe) return;
@@ -552,8 +552,8 @@ export default function ReportBuilder() {
             <Copy className="mr-2 h-4 w-4" /> Duplicate
           </Button>
           <Button
-            variant="secondary"
-            className="rounded-2xl bg-white ring-1 ring-border/50"
+            variant="outline"
+            className="rounded-2xl border-border bg-white shadow-sm hover:bg-slate-50"
             onClick={exportPdf}
           >
             <Download className="mr-2 h-4 w-4" /> Export PDF
