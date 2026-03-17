@@ -129,13 +129,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       metrics.forEach(newMetric => {
         const idx = updatedMetrics.findIndex(m => m.clientId === newMetric.clientId && m.month === newMetric.month);
         if (idx >= 0) {
+          // Update existing metric by merging values and top-level fields
           updatedMetrics[idx] = { 
             ...updatedMetrics[idx], 
+            ...newMetric,
             values: { ...updatedMetrics[idx].values, ...newMetric.values },
             updatedAt: now 
           };
         } else {
+          // Create new metric
           updatedMetrics.push({ 
+            includeInAgencyImpact: true, // Default to true
             ...newMetric, 
             id: createId("mm"), 
             createdAt: now, 

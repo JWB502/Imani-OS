@@ -511,7 +511,7 @@ export default function RoiDashboard() {
 
           {monthEntry && (
             <ImpactToggle
-              checked={monthEntry.includeInAgencyImpact ?? false}
+              checked={monthEntry.includeInAgencyImpact ?? true}
               onCheckedChange={(val) => {
                 upsertMonthlyMetric({
                   clientId,
