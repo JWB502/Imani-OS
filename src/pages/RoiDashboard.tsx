@@ -1,6 +1,19 @@
+"use client";
+
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { 
+  CalendarPlus, 
+  Edit3, 
+  Lock, 
+  Plus, 
+  TrendingUp, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight, 
+  Download,
+  Info
+} from "lucide-react";
 import {
   Line,
   LineChart,
@@ -46,12 +59,6 @@ function normalizeName(s: string) {
   return s.trim().toLowerCase();
 }
 
-function metricLabel(md: MetricDefinition) {
-  if (md.kind === "currency") return `${md.name} ($)`;
-  if (md.kind === "percent") return `${md.name} (%)`;
-  return md.name;
-}
-
 function metricSort(a: MetricDefinition, b: MetricDefinition) {
   const aStd = a.isStandard ? 1 : 0;
   const bStd = b.isStandard ? 1 : 0;
@@ -68,25 +75,6 @@ function metricSort(a: MetricDefinition, b: MetricDefinition) {
   if (ao !== undefined || bo !== undefined) return (ao ?? 99) - (bo ?? 99);
 
   return a.name.localeCompare(b.name);
-}
-
-const MONTH_META = [
-  { label: "Jan", num: 1 },
-  { label: "Feb", num: 2 },
-  { label: "Mar", num: 3 },
-  { label: "Apr", num: 4 },
-  { label: "May", num: 5 },
-  { label: "Jun", num: 6 },
-  { label: "Jul", num: 7 },
-  { label: "Aug", num: 8 },
-  { label: "Sep", num: 9 },
-  { label: "Oct", num: 10 },
-  { label: "Nov", num: 11 },
-  { label: "Dec", num: 12 },
-];
-
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
 }
 
 function parseNumberOrUndefined(raw: string): number | undefined {
@@ -106,7 +94,6 @@ export default function RoiDashboard() {
     updateMetricDefinition,
     deleteMetricDefinition,
     upsertMonthlyMetric,
-    deleteMonthlyMetric,
   } = useData();
 
   const [params, setParams] = useSearchParams();
@@ -119,8 +106,7 @@ export default function RoiDashboard() {
       params.set("clientId", clientId);
       setParams(params, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId]);
+  }, [clientId, clientIdFromUrl, params, setParams]);
 
   React.useEffect(() => {
     if (!clientId) return;
@@ -186,13 +172,11 @@ export default function RoiDashboard() {
     };
   }, [months, revenueMd, expensesMd]);
 
-  // Year over Year Growth
   const yoyGrowth = React.useMemo(() => {
     if (!revenueMd || months.length < 13) return null;
     const latest = months[months.length - 1];
     const latestRev = latest.values[revenueMd.id];
     
-    // Find same month last year
     const lastYearParts = latest.month.split("-");
     const lastYearMonth = `${parseInt(lastYearParts[0]) - 1}-${lastYearParts[1]}`;
     const previous = months.find(m => m.month === lastYearMonth);
@@ -265,7 +249,7 @@ export default function RoiDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <Button 
@@ -279,7 +263,7 @@ export default function RoiDashboard() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">ROI Tracking</h1>
             <p className="text-sm text-muted-foreground">
-              Performance metrics for <span className="font-semibold text-foreground">{client.name}</span>.
+              Core KPIs for <span className="font-semibold text-foreground">{client.name}</span>
             </p>
           </div>
         </div>
@@ -290,7 +274,7 @@ export default function RoiDashboard() {
             onClick={() => setOpenExport(true)}
           >
             <Download className="mr-2 h-4 w-4" />
-            Export PDF
+            Export
           </Button>
           <Button
             variant="outline"
@@ -298,7 +282,7 @@ export default function RoiDashboard() {
             onClick={() => setOpenBulk(true)}
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
-            Bulk KPI Entry
+            Bulk Entry
           </Button>
           <Button
             className="rounded-2xl"
@@ -320,9 +304,11 @@ export default function RoiDashboard() {
       />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Average ROI</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              Average ROI <Info className="h-3 w-3" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -330,15 +316,15 @@ export default function RoiDashboard() {
                 ? "—"
                 : `${Math.round(overallRoi.roi)}%`}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across {overallRoi.months} active months
+            <p className="text-[10px] text-muted-foreground mt-1">
+              (Revenue - Service Expenses) / Service Expenses
             </p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">YoY Revenue Growth</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">YoY Growth</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold flex items-center gap-2">
@@ -347,71 +333,21 @@ export default function RoiDashboard() {
                 <TrendingUp className={`h-5 w-5 ${yoyGrowth >= 0 ? 'text-emerald-500' : 'text-rose-500'}`} />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Compared to same month last year
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Revenue vs same month last year
             </p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Months Tracked</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data Points</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{months.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total historical records
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Total monthly records tracked
             </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Overall ROI (client)</CardTitle>
-            <div className="text-sm text-muted-foreground">
-              Average monthly ROI across all months with Revenue & Service
-              Expenses.
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
-              <div className="text-xs text-white/80">Average ROI</div>
-              <div className="mt-1 text-3xl font-semibold tracking-tight">
-                {overallRoi.roi === undefined
-                  ? "—"
-                  : `${Math.round(overallRoi.roi)}%`}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-border/60">
-              <div className="text-xs text-muted-foreground">Based on</div>
-              <div className="mt-1 text-lg font-semibold">
-                {overallRoi.months} month{overallRoi.months === 1 ? "" : "s"}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Only months with both Revenue and Service Expenses {">"} 0 are
-                included.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Client snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center justify-between">
-              <span>Client</span>
-              <span className="font-medium text-foreground">{client.name}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Active months</span>
-              <span className="font-medium text-foreground">
-                {months.length}
-              </span>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -419,47 +355,41 @@ export default function RoiDashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card className="overflow-hidden rounded-3xl border border-border/70 bg-white/70 shadow-sm">
-            <CardHeader className="border-b border-border/50 bg-white/30 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Monthly Tracking</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full"
-                    onClick={handlePrevMonth}
-                    disabled={months.length <= 1 || months[0]?.month === activeMonth}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Select value={activeMonth} onValueChange={setActiveMonth}>
-                    <SelectTrigger className="h-9 w-[140px] rounded-xl bg-white/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {months.length === 0 ? (
-                        <SelectItem value={activeMonth}>
-                          {activeMonth}
-                        </SelectItem>
-                      ) : (
-                        months.map((m) => (
-                          <SelectItem key={m.id} value={m.month}>
-                            {m.month}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full"
-                    onClick={handleNextMonth}
-                    disabled={months.length <= 1 || months[months.length - 1]?.month === activeMonth}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+            <CardHeader className="border-b border-border/50 bg-white/30 px-6 py-4 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base font-semibold">Tracked KPIs</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={handlePrevMonth}
+                  disabled={months.length <= 1 || months[0]?.month === activeMonth}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Select value={activeMonth} onValueChange={setActiveMonth}>
+                  <SelectTrigger className="h-9 w-[140px] rounded-xl bg-white/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {months.length === 0 ? (
+                      <SelectItem value={activeMonth}>{activeMonth}</SelectItem>
+                    ) : (
+                      months.map((m) => (
+                        <SelectItem key={m.id} value={m.month}>{m.month}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={handleNextMonth}
+                  disabled={months.length <= 1 || months[months.length - 1]?.month === activeMonth}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -474,7 +404,7 @@ export default function RoiDashboard() {
                       className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:px-6"
                     >
                       <div className="min-w-0 flex-1">
-                        {editingMetricId === md.id ? (
+                        {editingMetricId === md.id && !isStandard ? (
                           <div className="flex items-center gap-2">
                             <Input
                               value={editMetricName}
@@ -483,9 +413,7 @@ export default function RoiDashboard() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  updateMetricDefinition(md.id, {
-                                    name: editMetricName,
-                                  });
+                                  updateMetricDefinition(md.id, { name: editMetricName });
                                   setEditingMetricId(null);
                                 } else if (e.key === "Escape") {
                                   setEditingMetricId(null);
@@ -496,9 +424,7 @@ export default function RoiDashboard() {
                               size="sm"
                               className="h-8 rounded-lg"
                               onClick={() => {
-                                updateMetricDefinition(md.id, {
-                                  name: editMetricName,
-                                });
+                                updateMetricDefinition(md.id, { name: editMetricName });
                                 setEditingMetricId(null);
                               }}
                             >
@@ -507,48 +433,44 @@ export default function RoiDashboard() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">
+                            <span className={`font-medium ${isStandard ? 'text-[color:var(--im-navy)]' : 'text-foreground'}`}>
                               {md.name}
                             </span>
                             {isStandard && (
                               <Badge
                                 variant="secondary"
-                                className="h-4 rounded-full px-1.5 py-0 text-[10px] font-medium"
+                                className="h-4 rounded-full px-1.5 py-0 text-[8px] font-bold uppercase bg-slate-100 text-slate-500 border-none"
                               >
-                                Standard
+                                <Lock className="h-2 w-2 mr-1" /> Locked
                               </Badge>
                             )}
-                            <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
-                                onClick={() => {
-                                  setEditingMetricId(md.id);
-                                  setEditMetricName(md.name);
-                                }}
-                              >
-                                <Edit3 className="h-3 w-3" />
-                              </Button>
-                              {!isStandard && (
+                            {!isStandard && (
+                              <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    setEditingMetricId(md.id);
+                                    setEditMetricName(md.name);
+                                  }}
+                                >
+                                  <Edit3 className="h-3 w-3" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6 rounded-md text-muted-foreground hover:text-rose-600"
                                   onClick={() => {
-                                    if (
-                                      confirm(
-                                        `Delete metric "${md.name}"? This will remove all historical data for this KPI.`,
-                                      )
-                                    ) {
+                                    if (confirm(`Delete metric "${md.name}"? Historical data will be lost.`)) {
                                       deleteMetricDefinition(md.id);
                                     }
                                   }}
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         )}
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -560,18 +482,16 @@ export default function RoiDashboard() {
                         <div className="relative">
                           <Input
                             placeholder="0.00"
-                            className="h-10 rounded-xl bg-white/50 pl-8 pr-4"
+                            className="h-10 rounded-xl bg-white/50 pl-8 pr-4 focus:ring-primary/20"
                             value={val === undefined ? "" : val}
-                            onChange={(e) =>
-                              handleValueChange(md.id, e.target.value)
-                            }
+                            onChange={(e) => handleValueChange(md.id, e.target.value)}
                             inputMode="decimal"
                           />
                           <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             {md.kind === "currency" ? (
-                              <span className="text-sm">$</span>
+                              <span className="text-sm font-medium">$</span>
                             ) : md.kind === "percent" ? (
-                              <span className="text-sm">%</span>
+                              <span className="text-sm font-medium">%</span>
                             ) : (
                               <TrendingUp className="h-3.5 w-3.5" />
                             )}
@@ -581,12 +501,6 @@ export default function RoiDashboard() {
                     </div>
                   );
                 })}
-
-                {metricDefs.length === 0 && (
-                  <div className="p-12 text-center text-muted-foreground">
-                    No KPIs defined yet.
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -609,14 +523,14 @@ export default function RoiDashboard() {
             />
           )}
 
-          <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Notes</CardTitle>
+          <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Monthly Notes</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
-                placeholder="Monthly observations or context..."
-                className="min-h-[120px] rounded-2xl bg-white/50"
+                placeholder="Context for this month's performance..."
+                className="min-h-[120px] rounded-2xl bg-white/50 resize-none border-border/50"
                 value={monthEntry?.notes ?? ""}
                 onChange={(e) =>
                   upsertMonthlyMetric({
@@ -643,11 +557,9 @@ export default function RoiDashboard() {
               <Input
                 id="name"
                 placeholder="e.g. Sales, Lead Volume, CPA"
-                className="rounded-xl"
+                className="rounded-xl h-11"
                 value={newMetric.name}
-                onChange={(e) =>
-                  setNewMetric({ ...newMetric, name: e.target.value })
-                }
+                onChange={(e) => setNewMetric({ ...newMetric, name: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -657,7 +569,7 @@ export default function RoiDashboard() {
                   <Button
                     key={k}
                     variant={newMetric.kind === k ? "default" : "outline"}
-                    className="rounded-xl"
+                    className="rounded-xl h-10"
                     onClick={() => setNewMetric({ ...newMetric, kind: k })}
                   >
                     {k === "currency" ? "$" : k === "percent" ? "%" : "#"}
@@ -686,7 +598,7 @@ export default function RoiDashboard() {
                 setOpenAddMetric(false);
                 toast({
                   title: "KPI Added",
-                  description: `"${newMetric.name}" is now available for tracking.`,
+                  description: `"${newMetric.name}" is now available.`,
                 });
               }}
             >
