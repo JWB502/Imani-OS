@@ -1,5 +1,14 @@
+' in JSX to fix TS1002/TS1382.">
 import * as React from "react";
-import { Minus, Plus, Trash2, TrendingUp, FileText, ListChecks, Settings2 } from "lucide-react";
+import {
+  FileText,
+  ListChecks,
+  Minus,
+  Plus,
+  Settings2,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 
 import {
   AlertDialog,
@@ -31,7 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useData } from "@/contexts/DataContext";
@@ -94,13 +102,17 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
   const initialChannelOption = React.useMemo(() => {
     const existing = campaign?.channel;
     if (!existing) return "Facebook Ads";
-    return (CHANNEL_OPTIONS as readonly string[]).includes(existing) ? existing : "Other";
+    return (CHANNEL_OPTIONS as readonly string[]).includes(existing)
+      ? existing
+      : "Other";
   }, [campaign?.channel]);
 
   const [title, setTitle] = React.useState("");
-  const [channelOption, setChannelOption] = React.useState<string>(initialChannelOption);
+  const [channelOption, setChannelOption] =
+    React.useState<string>(initialChannelOption);
   const [otherChannel, setOtherChannel] = React.useState("");
-  const [managementType, setManagementType] = React.useState<ManagementType>("DFY");
+  const [managementType, setManagementType] =
+    React.useState<ManagementType>("DFY");
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [budget, setBudget] = React.useState("");
@@ -135,7 +147,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
       value: String(r.value ?? ""),
       unit: r.unit ?? "",
     }));
-    setResults(base.length ? base : [{ id: createId("cmr"), name: "", value: "", unit: "" }]);
+    setResults(
+      base.length ? base : [{ id: createId("cmr"), name: "", value: "", unit: "" }],
+    );
   }, [open, campaign, initialChannelOption]);
 
   const spendNum = toNumberOrUndefined(adSpend);
@@ -151,7 +165,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
           ? "bg-sky-100 text-sky-900"
           : "bg-rose-100 text-rose-900";
 
-  const resolvedChannel = (channelOption === "Other" ? otherChannel : channelOption).trim();
+  const resolvedChannel = (
+    channelOption === "Other" ? otherChannel : channelOption
+  ).trim();
 
   const validate = React.useCallback(() => {
     const nextErrors: Record<string, string> = {};
@@ -178,7 +194,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
     if (!validate()) return;
 
     const titleTrim = title.trim();
-    const finalTitle = titleTrim ? titleTrim : defaultTitle(resolvedChannel, startDate || undefined);
+    const finalTitle = titleTrim
+      ? titleTrim
+      : defaultTitle(resolvedChannel, startDate || undefined);
 
     const budgetN = toNumberOrUndefined(budget);
     const spendN = toNumberOrUndefined(adSpend);
@@ -228,8 +246,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-3xl border-border/70 bg-white/80 p-0 shadow-xl backdrop-blur">
-        <div className="flex flex-col h-[85vh] max-h-[700px]">
-          <div className="p-6 sm:p-7 md:p-8 pb-4">
+        <div className="flex h-[85vh] max-h-[700px] flex-col">
+          <div className="p-6 pb-4 sm:p-7 md:p-8">
             <DialogHeader className="gap-2">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -242,7 +260,12 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Badge className={cn("rounded-full px-3 py-1 text-xs ring-1 ring-border/50", roiChipClass)}>
+                  <Badge
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs ring-1 ring-border/50",
+                      roiChipClass,
+                    )}
+                  >
                     ROI: {roi === undefined ? "—" : formatPercent(roi)}
                   </Badge>
                 </div>
@@ -250,25 +273,25 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
             </DialogHeader>
           </div>
 
-          <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="general" className="flex flex-1 flex-col min-h-0">
             <div className="px-6 sm:px-7 md:px-8">
               <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white/50 p-1">
-                <TabsTrigger value="general" className="rounded-xl gap-2">
+                <TabsTrigger value="general" className="gap-2 rounded-xl">
                   <Settings2 className="h-4 w-4" />
                   General
                 </TabsTrigger>
-                <TabsTrigger value="results" className="rounded-xl gap-2">
+                <TabsTrigger value="results" className="gap-2 rounded-xl">
                   <ListChecks className="h-4 w-4" />
                   Results
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="rounded-xl gap-2">
+                <TabsTrigger value="notes" className="gap-2 rounded-xl">
                   <FileText className="h-4 w-4" />
                   Notes
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 sm:p-7 md:p-8 pt-4">
+            <div className="flex-1 overflow-y-auto p-6 pt-4 sm:p-7 md:p-8">
               <TabsContent value="general" className="mt-0 space-y-6">
                 <div className="grid gap-5 lg:grid-cols-3">
                   <div className="space-y-4 lg:col-span-2">
@@ -286,7 +309,10 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
 
                       <div className="space-y-2">
                         <Label>Channel</Label>
-                        <Select value={channelOption} onValueChange={setChannelOption}>
+                        <Select
+                          value={channelOption}
+                          onValueChange={setChannelOption}
+                        >
                           <SelectTrigger className="rounded-2xl bg-white/80">
                             <SelectValue placeholder="Choose a channel" />
                           </SelectTrigger>
@@ -307,7 +333,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                         <Label>Management type</Label>
                         <Select
                           value={managementType}
-                          onValueChange={(v) => setManagementType(v as ManagementType)}
+                          onValueChange={(v) =>
+                            setManagementType(v as ManagementType)
+                          }
                         >
                           <SelectTrigger className="rounded-2xl bg-white/80">
                             <SelectValue placeholder="Select" />
@@ -354,7 +382,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                         />
                       </div>
                       {errors.dates ? (
-                        <div className="md:col-span-2 text-xs text-rose-700">{errors.dates}</div>
+                        <div className="text-xs text-rose-700 md:col-span-2">
+                          {errors.dates}
+                        </div>
                       ) : null}
                     </div>
 
@@ -452,7 +482,8 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                 <div className="rounded-3xl border border-border/70 bg-white/70 p-6">
                   <div className="text-sm font-semibold">Campaign Results</div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Track outcomes for this campaign. Use Metric, Value, and Unit (optional). Examples: Leads, Calls, Sign-ups, Bookings.
+                    Track outcomes for this campaign. Use Metric, Value, and Unit (optional).
+                    Examples: Leads, Calls, Sign-ups, Bookings.
                   </div>
 
                   <div className="mt-6 grid grid-cols-12 gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
@@ -470,7 +501,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                             value={r.name}
                             onChange={(e) =>
                               setResults((prev) =>
-                                prev.map((p) => (p.id === r.id ? { ...p, name: e.target.value } : p)),
+                                prev.map((p) =>
+                                  p.id === r.id ? { ...p, name: e.target.value } : p,
+                                ),
                               )
                             }
                             placeholder={idx === 0 ? "Metric name (e.g., Leads)" : "Metric name"}
@@ -486,7 +519,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                             step="1"
                             onChange={(e) =>
                               setResults((prev) =>
-                                prev.map((p) => (p.id === r.id ? { ...p, value: e.target.value } : p)),
+                                prev.map((p) =>
+                                  p.id === r.id ? { ...p, value: e.target.value } : p,
+                                ),
                               )
                             }
                             placeholder="Number"
@@ -499,7 +534,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                             value={r.unit}
                             onChange={(e) =>
                               setResults((prev) =>
-                                prev.map((p) => (p.id === r.id ? { ...p, unit: e.target.value } : p)),
+                                prev.map((p) =>
+                                  p.id === r.id ? { ...p, unit: e.target.value } : p,
+                                ),
                               )
                             }
                             placeholder="Unit"
@@ -529,7 +566,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full rounded-2xl bg-white/80 border-dashed border-2 hover:bg-white"
+                      className="w-full rounded-2xl border-dashed border-2 bg-white/80 hover:bg-white"
                       onClick={() =>
                         setResults((prev) => [
                           ...prev,
@@ -558,7 +595,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
             </div>
           </Tabs>
 
-          <div className="p-6 sm:p-7 md:p-8 pt-4 border-t border-border/50 bg-white/40">
+          <div className="border-t border-border/50 bg-white/40 p-6 pt-4 sm:p-7 md:p-8">
             <DialogFooter className="gap-2 sm:gap-2">
               {isEdit && campaign ? (
                 <AlertDialog>
@@ -570,9 +607,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, campaign }: Props
                   <AlertDialogContent className="rounded-3xl border-border/70 bg-white/90 backdrop-blur">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This cannot be undone.
-                      </AlertDialogDescription>
+                      <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
