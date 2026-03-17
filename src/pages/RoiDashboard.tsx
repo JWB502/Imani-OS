@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2 } from "lucide-react";
+import { CalendarPlus, Edit3, Lock, Plus, TrendingUp, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Line,
   LineChart,
@@ -196,6 +196,16 @@ export default function RoiDashboard() {
   const monthEntry = months.find((m) => m.month === activeMonth);
 
   const [openBulk, setOpenBulk] = React.useState(false);
+  const [openAddMetric, setOpenAddMetric] = React.useState(false);
+  const [newMetric, setNewMetric] = React.useState({
+    name: "",
+    kind: "currency" as MetricDefinition["kind"],
+  });
+
+  const [editingMetricId, setEditingMetricId] = React.useState<string | null>(
+    null,
+  );
+  const [editMetricName, setEditMetricName] = React.useState("");
 
   if (!client) {
     return (
@@ -210,8 +220,60 @@ export default function RoiDashboard() {
     ? monthEntry?.values[expensesMd.id]
     : undefined;
 
+  const handleValueChange = (metricId: string, valStr: string) => {
+    const val = parseNumberOrUndefined(valStr);
+    upsertMonthlyMetric({
+      clientId,
+      month: activeMonth,
+      values: {
+        ...monthEntry?.values,
+        [metricId]: val as any,
+      },
+    });
+  };
+
+  const handlePrevMonth = () => {
+    const idx = months.findIndex((m) => m.month === activeMonth);
+    if (idx > 0) setActiveMonth(months[idx - 1].month);
+  };
+
+  const handleNextMonth = () => {
+    const idx = months.findIndex((m) => m.month === activeMonth);
+    if (idx !== -1 && idx < months.length - 1)
+      setActiveMonth(months[idx + 1].month);
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">ROI Tracking</h1>
+          <p className="text-sm text-muted-foreground">
+            Track metrics and calculate ROI for {client.name}.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-2xl"
+            onClick={() => setOpenBulk(true)}
+          >
+            <CalendarPlus className="mr-2 h-4 w-4" />
+            Bulk add months
+          </Button>
+          <Button
+            className="rounded-2xl"
+            onClick={() => {
+              setNewMetric({ name: "", kind: "currency" });
+              setOpenAddMetric(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add KPI
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm md:col-span-2">
           <CardHeader>
@@ -252,11 +314,295 @@ export default function RoiDashboard() {
               <span>Client</span>
               <span className="font-medium text-foreground">{client.name}</span>
             </div>
+            <div className="flex items-center justify-between">
+              <span>Active months</span>
+              <span className="font-medium text-foreground">
+                {months.length}
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <RoiSummary revenue={monthRevenue} expenses={monthExpenses} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card className="overflow-hidden rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+            <CardHeader className="border-b border-border/50 bg-white/30 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Monthly Tracking</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full"
+                    onClick={handlePrevMonth}
+                    disabled={months.length <= 1 || months[0]?.month === activeMonth}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Select value={activeMonth} onValueChange={setActiveMonth}>
+                    <SelectTrigger className="h-9 w-[140px] rounded-xl bg-white/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.length === 0 ? (
+                        <SelectItem value={activeMonth}>
+                          {activeMonth}
+                        </SelectItem>
+                      ) : (
+                        months.map((m) => (
+                          <SelectItem key={m.id} value={m.month}>
+                            {m.month}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full"
+                    onClick={handleNextMonth}
+                    disabled={months.length <= 1 || months[months.length - 1]?.month === activeMonth}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/40">
+                {metricDefs.map((md) => {
+                  const val = monthEntry?.values[md.id];
+                  const isStandard = standardIds.has(md.id);
+
+                  return (
+                    <div
+                      key={md.id}
+                      className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-6 sm:px-6"
+                    >
+                      <div className="min-w-0 flex-1">
+                        {editingMetricId === md.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editMetricName}
+                              onChange={(e) => setEditMetricName(e.target.value)}
+                              className="h-8 rounded-lg"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  updateMetricDefinition(md.id, {
+                                    name: editMetricName,
+                                  });
+                                  setEditingMetricId(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingMetricId(null);
+                                }
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              className="h-8 rounded-lg"
+                              onClick={() => {
+                                updateMetricDefinition(md.id, {
+                                  name: editMetricName,
+                                });
+                                setEditingMetricId(null);
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">
+                              {md.name}
+                            </span>
+                            {isStandard && (
+                              <Badge
+                                variant="secondary"
+                                className="h-4 rounded-full px-1.5 py-0 text-[10px] font-medium"
+                              >
+                                Standard
+                              </Badge>
+                            )}
+                            <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setEditingMetricId(md.id);
+                                  setEditMetricName(md.name);
+                                }}
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </Button>
+                              {!isStandard && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 rounded-md text-muted-foreground hover:text-rose-600"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Delete metric "${md.name}"? This will remove all historical data for this KPI.`,
+                                      )
+                                    ) {
+                                      deleteMetricDefinition(md.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {md.kind}
+                        </div>
+                      </div>
+
+                      <div className="w-full sm:w-48">
+                        <div className="relative">
+                          <Input
+                            placeholder="0.00"
+                            className="h-10 rounded-xl bg-white/50 pl-8 pr-4"
+                            value={val === undefined ? "" : val}
+                            onChange={(e) =>
+                              handleValueChange(md.id, e.target.value)
+                            }
+                            inputMode="decimal"
+                          />
+                          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            {md.kind === "currency" ? (
+                              <span className="text-sm">$</span>
+                            ) : md.kind === "percent" ? (
+                              <span className="text-sm">%</span>
+                            ) : (
+                              <TrendingUp className="h-3.5 w-3.5" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {metricDefs.length === 0 && (
+                  <div className="p-12 text-center text-muted-foreground">
+                    No KPIs defined yet.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <RoiSummary revenue={monthRevenue} expenses={monthExpenses} />
+
+          {monthEntry && (
+            <ImpactToggle
+              checked={monthEntry.includeInAgencyImpact ?? false}
+              onCheckedChange={(val) => {
+                upsertMonthlyMetric({
+                  clientId,
+                  month: activeMonth,
+                  includeInAgencyImpact: val,
+                  values: monthEntry.values,
+                });
+              }}
+            />
+          )}
+
+          <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Monthly observations or context..."
+                className="min-h-[120px] rounded-2xl bg-white/50"
+                value={monthEntry?.notes ?? ""}
+                onChange={(e) =>
+                  upsertMonthlyMetric({
+                    clientId,
+                    month: activeMonth,
+                    notes: e.target.value,
+                    values: monthEntry?.values ?? {},
+                  })
+                }
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Dialog open={openAddMetric} onOpenChange={setOpenAddMetric}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Add New KPI</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">KPI Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g. Sales, Lead Volume, CPA"
+                className="rounded-xl"
+                value={newMetric.name}
+                onChange={(e) =>
+                  setNewMetric({ ...newMetric, name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Unit Type</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["currency", "percent", "number"] as const).map((k) => (
+                  <Button
+                    key={k}
+                    variant={newMetric.kind === k ? "default" : "outline"}
+                    className="rounded-xl"
+                    onClick={() => setNewMetric({ ...newMetric, kind: k })}
+                  >
+                    {k === "currency" ? "$" : k === "percent" ? "%" : "#"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setOpenAddMetric(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl"
+              disabled={!newMetric.name.trim()}
+              onClick={() => {
+                createMetricDefinition({
+                  clientId,
+                  name: newMetric.name,
+                  kind: newMetric.kind,
+                });
+                setOpenAddMetric(false);
+                toast({
+                  title: "KPI Added",
+                  description: `"${newMetric.name}" is now available for tracking.`,
+                });
+              }}
+            >
+              Add KPI
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BulkMonthAddDialog
         open={openBulk}
