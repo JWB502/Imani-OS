@@ -35,9 +35,11 @@ import { useData } from "@/contexts/DataContext";
 import type { MetricDefinition } from "@/types/imani";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { SoftButton } from "@/components/app/SoftButton";
-import { BulkMonthAddDialog } from "@/components/roi/BulkMonthAddDialog";
+import { RoiBulkEntryDialog } from "@/components/roi/RoiBulkEntryDialog";
 import { RoiSummary } from "@/components/roi/RoiSummary";
 import { ImpactToggle } from "@/components/roi/ImpactToggle";
+import { RoiPerformanceChart } from "@/components/roi/RoiPerformanceChart";
+import { RoiClientSelector } from "@/components/roi/RoiClientSelector";
 
 function normalizeName(s: string) {
   return s.trim().toLowerCase();
@@ -109,9 +111,7 @@ export default function RoiDashboard() {
   const [params, setParams] = useSearchParams();
 
   const clientIdFromUrl = params.get("clientId") ?? "";
-  const [clientId, setClientId] = React.useState(
-    clientIdFromUrl || data.clients[0]?.id || "",
-  );
+  const [clientId, setClientId] = React.useState(clientIdFromUrl || "");
 
   React.useEffect(() => {
     if (clientId && clientId !== clientIdFromUrl) {
@@ -185,6 +185,24 @@ export default function RoiDashboard() {
     };
   }, [months, revenueMd, expensesMd]);
 
+  // Year over Year Growth
+  const yoyGrowth = React.useMemo(() => {
+    if (!revenueMd || months.length < 13) return null;
+    const latest = months[months.length - 1];
+    const latestRev = latest.values[revenueMd.id];
+    
+    // Find same month last year
+    const lastYearParts = latest.month.split("-");
+    const lastYearMonth = `${parseInt(lastYearParts[0]) - 1}-${lastYearParts[1]}`;
+    const previous = months.find(m => m.month === lastYearMonth);
+    const previousRev = previous?.values[revenueMd.id];
+
+    if (typeof latestRev === "number" && typeof previousRev === "number" && previousRev > 0) {
+      return ((latestRev - previousRev) / previousRev) * 100;
+    }
+    return null;
+  }, [months, revenueMd]);
+
   const latestMonth =
     months[months.length - 1]?.month ?? new Date().toISOString().slice(0, 7);
   const [activeMonth, setActiveMonth] = React.useState(latestMonth);
@@ -209,9 +227,10 @@ export default function RoiDashboard() {
 
   if (!client) {
     return (
-      <div className="rounded-3xl border border-border/70 bg-white/70 p-8">
-        <div className="text-lg font-semibold">Choose a client to view ROI</div>
-      </div>
+      <RoiClientSelector 
+        clients={data.clients} 
+        onSelect={(id) => setClientId(id)} 
+      />
     );
   }
 
@@ -246,11 +265,21 @@ export default function RoiDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">ROI Tracking</h1>
-          <p className="text-sm text-muted-foreground">
-            Track metrics and calculate ROI for {client.name}.
-          </p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-xl h-10 w-10 border border-border/50 bg-white/50"
+            onClick={() => setClientId("")}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">ROI Tracking</h1>
+            <p className="text-sm text-muted-foreground">
+              Performance metrics for <span className="font-semibold text-foreground">{client.name}</span>.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -259,7 +288,7 @@ export default function RoiDashboard() {
             onClick={() => setOpenBulk(true)}
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
-            Bulk add months
+            Bulk KPI Entry
           </Button>
           <Button
             className="rounded-2xl"
@@ -272,6 +301,59 @@ export default function RoiDashboard() {
             Add KPI
           </Button>
         </div>
+      </div>
+
+      <RoiPerformanceChart 
+        months={months} 
+        revenueMd={revenueMd} 
+        expensesMd={expensesMd} 
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Average ROI</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {overallRoi.roi === undefined
+                ? "—"
+                : `${Math.round(overallRoi.roi)}%`}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Across {overallRoi.months} active months
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">YoY Revenue Growth</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold flex items-center gap-2">
+              {yoyGrowth === null ? "—" : `${Math.round(yoyGrowth)}%`}
+              {yoyGrowth !== null && (
+                <TrendingUp className={`h-5 w-5 ${yoyGrowth >= 0 ? 'text-emerald-500' : 'text-rose-500'}`} />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Compared to same month last year
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border border-border/70 bg-white/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Months Tracked</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{months.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total historical records
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -604,11 +686,11 @@ export default function RoiDashboard() {
         </DialogContent>
       </Dialog>
 
-      <BulkMonthAddDialog
+      <RoiBulkEntryDialog
         open={openBulk}
         onOpenChange={setOpenBulk}
         client={client}
-        existingMonths={months.map((m) => m.month)}
+        metricDefs={metricDefs}
       />
     </div>
   );
