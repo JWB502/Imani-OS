@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { 
   Calculator, 
@@ -6,10 +8,9 @@ import {
   UserPlus, 
   Clock, 
   Info,
-  ChevronRight,
   Zap
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -228,23 +229,38 @@ export default function ValueCalculator() {
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/70 border border-indigo-100/50 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--im-navy)] uppercase tracking-tight">
-                      <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                      Impact Snapshot
-                    </div>
-                    <div className="flex items-end gap-3">
-                      <div className="w-20">
-                        <Input 
-                          type="number"
-                          className="h-8 text-xs font-bold border-indigo-200 focus:ring-indigo-500"
-                          value={impactHours}
-                          onChange={(e) => setImpactHours(e.target.value)}
-                        />
+                  {/* Enhanced Impact Snapshot */}
+                  <div className="p-5 rounded-2xl bg-white/80 border border-indigo-100/60 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--im-navy)] uppercase tracking-widest">
+                        <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        Impact Snapshot
                       </div>
-                      <p className="text-[11px] leading-tight text-muted-foreground pb-1">
-                        If you save these hours per month, that frees up approximately <span className="font-bold text-[color:var(--im-navy)]">{formatCurrency(estimatedImpactValue)}</span> in estimated value.
-                      </p>
+                      <div className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                        Efficiency Gain
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Hours Saved Per Month</Label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input 
+                            type="number"
+                            className="pl-8 h-9 text-sm font-bold border-indigo-100 focus:ring-indigo-500 rounded-xl bg-white/50"
+                            value={impactHours}
+                            onChange={(e) => setImpactHours(e.target.value)}
+                            placeholder="Hours..."
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2 border-t border-indigo-50">
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          Saving these hours frees up an estimated <span className="text-lg font-black text-[color:var(--im-navy)] block mt-1">{formatCurrency(estimatedImpactValue)}</span> in monthly business value.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
