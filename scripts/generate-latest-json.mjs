@@ -32,13 +32,19 @@ function lower(s) {
 function detectPlatformKey(filename) {
   const f = lower(filename);
 
-  if (f.endsWith(".msi") || f.endsWith(".exe")) return "windows-x86_64";
+  // Modern Tauri v2 uses full triples. 
+  // We'll map simple suffixes to common v2 target triples.
+  if (f.endsWith(".msi") || f.endsWith(".exe")) {
+    if (f.includes("x64") || f.includes("x86_64")) return "windows-x86_64";
+    if (f.includes("arm64") || f.includes("aarch64")) return "windows-aarch64";
+    // Fallback default
+    return "windows-x86_64";
+  }
 
   if (f.endsWith(".dmg")) {
     if (f.includes("universal")) return "darwin-universal";
     if (f.includes("aarch64") || f.includes("arm64") || f.includes("apple")) return "darwin-aarch64";
     if (f.includes("x86_64") || f.includes("x64") || f.includes("intel")) return "darwin-x86_64";
-    // fallback: assume aarch64 for modern macOS runners
     return "darwin-aarch64";
   }
 
@@ -89,16 +95,28 @@ async function main() {
     const url = `${baseUrl}/${encodeURIComponent(fileName)}`;
 
     if (platformKey === "darwin-universal") {
-      // Tauri's official schema doesn't list darwin-universal as a key; map the same artifact to both arch keys.
+      // Map universal to both apple and intel triples for v2
       platforms["darwin-aarch64"] = { url, signature };
       platforms["darwin-x86_64"] = { url, signature };
       continue;
     }
 
-    platforms[platformKey] = { url, signature };
+    // Tauri v2 prefers full triples. 
+    // We map our simplified keys to the standard target triples.
+    const tripleMap = {
+      "windows-x86_64": "x86_64-pc-windows-msvc",
+      "windows-aarch64": "aarch64-pc-windows-msvc",
+      "darwin-x86_64": "x86_64-apple-darwin",
+      "darwin-aarch64": "aarch64-apple-darwin",
+      "linux-x86_64": "x86_64-unknown-linux-gnu",
+      "linux-aarch64": "aarch64-unknown-linux-gnu"
+    };
+
+    const finalKey = tripleMap[platformKey] || platformKey;
+    platforms[finalKey] = { url, signature };
   }
 
-  if (!platforms["windows-x86_64"] && !platforms["darwin-aarch64"] && !platforms["darwin-x86_64"]) {
+  if (!Object.keys(platforms).length) {
     throw new Error(
       `No updater platforms found. Looked for .dmg/.msi/.exe and matching .sig under: ${bundleDir}`,
     );

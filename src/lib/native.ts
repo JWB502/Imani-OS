@@ -1,5 +1,10 @@
 export function isTauri(): boolean {
-  return typeof window !== "undefined" && Boolean((window as any).__TAURI__);
+  // In Tauri v2 with withGlobalTauri: false, window.__TAURI__ is not present.
+  // We check for __TAURI_INTERNALS__ which is usually present in the IPC bridge.
+  return typeof window !== "undefined" && (
+    Boolean((window as any).__TAURI__) || 
+    Boolean((window as any).__TAURI_INTERNALS__)
+  );
 }
 
 export async function saveFile(opts: { content: string; defaultPath: string }) {
@@ -42,11 +47,10 @@ export async function openFile(): Promise<string | undefined> {
     const path = Array.isArray(selected) ? selected[0] : selected;
 
     const out: any = await readTextFile(path);
-    if (out instanceof ArrayBuffer) {
+    if (out instanceof Uint8Array || out instanceof ArrayBuffer) {
       return new TextDecoder("utf-8").decode(out);
     }
     return String(out);
-
   }
 
   return await new Promise((resolve) => {

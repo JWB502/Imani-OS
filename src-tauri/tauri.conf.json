@@ -1,9 +1,8 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "Imani OS",
   "version": "1.3.1",
   "identifier": "com.imaniadvantage.imani-os",
-
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:8080",
@@ -11,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "label": "main",

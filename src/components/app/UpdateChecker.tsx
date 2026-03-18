@@ -7,8 +7,9 @@ import { checkForUpdates, installAndRelaunch } from "@/lib/updater";
 export function UpdateChecker() {
   const [open, setOpen] = React.useState(false);
   const [installing, setInstalling] = React.useState(false);
+  const [progress, setProgress] = React.useState<number>(0);
   const [payload, setPayload] = React.useState<
-    | { version: string; notes?: string; update: unknown }
+    | { version: string; notes?: string; update: any }
     | null
   >(null);
 
@@ -51,11 +52,26 @@ export function UpdateChecker() {
       onInstall={async () => {
         if (installing) return;
         setInstalling(true);
-        const id = toast.loading("Downloading update…");
+        const toastId = toast.loading("Downloading update…");
+        
         try {
-          await installAndRelaunch(payload.update);
+          let totalDownloaded = 0;
+          let totalSize = 0;
+
+          await installAndRelaunch(payload.update, (p) => {
+            if (p.contentLength) {
+              totalSize = p.contentLength;
+            }
+            totalDownloaded += p.downloaded;
+            
+            if (totalSize > 0) {
+              const pct = Math.round((totalDownloaded / totalSize) * 100);
+              setProgress(pct);
+              toast.loading(`Downloading update: ${pct}%`, { id: toastId });
+            }
+          });
         } catch (e: any) {
-          toast.dismiss(id);
+          toast.dismiss(toastId);
           toast.error("Update install failed", {
             description: String(e?.message ?? e),
           });
