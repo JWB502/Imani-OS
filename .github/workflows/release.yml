@@ -70,6 +70,7 @@ jobs:
           releaseBody: "Automated release of Imani OS v__VERSION__"
           releaseDraft: true
           prerelease: false
+          tauriScript: npm run tauri
 
   publish-latest-json:
     name: Generate & Upload latest.json
