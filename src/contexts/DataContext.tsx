@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { 
   Client, MonthlyMetric, MetricDefinition, ImaniData, 
   Campaign, Win, SectionTemplate, FullTemplate, Report,
-  AgencyProduct, AgencyExpense 
+  AgencyProduct, AgencyExpense, ReportSection 
 } from '@/types/imani';
 import { createSeedData } from '@/data/seed';
 import { readJson, writeJson } from '@/lib/storage';
@@ -38,7 +38,7 @@ interface DataContextType {
   updateFullTemplate: (id: string, t: any) => void;
   duplicateFullTemplate: (id: string) => any;
   deleteFullTemplate: (id: string) => void;
-  createReportFromTemplate: (cid: string, tid: string) => void;
+  createReportFromTemplate: (cid: string, tid: string) => Report | undefined;
   updateReport: (id: string, r: any) => void;
   duplicateReport: (id: string) => any;
   deleteReport: (id: string) => void;
@@ -80,7 +80,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return client.oneTimeProjectValue || 0;
     }
 
-    // For Retainer or Other (defaulting to Retainer behavior for LTV)
     const expenseDef = currentState.metricDefinitions.find(
       d => d.clientId === clientId && d.name === "Service Expenses"
     );
@@ -103,7 +102,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date().toISOString()
     };
     
-    // Initial LTV calculation
     nc.totalLifetimeValue = calculateLtvForClient({ ...data, clients: [nc, ...data.clients] }, nc.id);
     
     setData(p => ({ ...p, clients: [nc, ...p.clients] }));
@@ -172,7 +170,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       metrics.forEach(newMetric => {
         const idx = updatedMetrics.findIndex(m => m.clientId === newMetric.clientId && m.month === newMetric.month);
         if (idx >= 0) {
-          // Update existing metric by merging values and top-level fields
           updatedMetrics[idx] = { 
             ...updatedMetrics[idx], 
             ...newMetric,
@@ -180,9 +177,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updatedAt: now 
           };
         } else {
-          // Create new metric
           updatedMetrics.push({ 
-            includeInAgencyImpact: true, // Default to true
+            includeInAgencyImpact: true,
             ...newMetric, 
             id: createId("mm"), 
             createdAt: now, 
@@ -249,7 +245,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateFullTemplate: (id: string, t: any) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.map(x => x.id === id ? { ...x, ...t, updatedAt: new Date().toISOString() } : x) })),
     duplicateFullTemplate: (id: string) => { const t = data.fullTemplates.find(x => x.id === id); if (!t) return; return value.createFullTemplate({ ...t, name: `${t.name} (Copy)` }); },
     deleteFullTemplate: (id: string) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.filter(x => x.id !== id) })),
-    createReportFromTemplate: (cid: string, tid: string) => { /* logic */ },
+    createReportFromTemplate: (cid: string, tid: string) => {
+      const template = data.fullTemplates.find(t => t.id === tid);
+      if (!template) return undefined;
+      
+      const sections: ReportSection[] = template.sectionTemplateIds.map(sid => {
+        const st = data.sectionTemplates.find(s => s.id === sid);
+        if (!st) return null;
+        return {
+          id: createId("rs"),
+          title: st.name,
+          blocks: st.blocks.map(b => ({ ...b, id: createId("blk") })),
+        };
+      }).filter(Boolean) as ReportSection[];
+
+      const nr: Report = {
+        id: createId("rp"),
+        clientId: cid,
+        title: `${template.name} - ${new Date().toLocaleDateString()}`,
+        reportType: template.name,
+        status: "Draft",
+        sections,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      setData(prev => ({ ...prev, reports: [nr, ...prev.reports] }));
+      return nr;
+    },
     updateReport: (id: string, r: any) => setData(p => ({ ...p, reports: p.reports.map(x => x.id === id ? { ...x, ...r, updatedAt: new Date().toISOString() } : x) })),
     duplicateReport: (id: string) => { const r = data.reports.find(x => x.id === id); if (!r) return; const nr = { ...r, id: createId("rp"), title: `${r.title} (Copy)`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, reports: [nr, ...p.reports] })); return nr; },
     deleteReport: (id: string) => setData(p => ({ ...p, reports: p.reports.filter(x => x.id !== id) })),
