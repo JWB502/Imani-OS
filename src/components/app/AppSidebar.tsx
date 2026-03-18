@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  Calculator,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -39,6 +40,7 @@ const nav = [
   { to: "/roi", label: "ROI Tracking", icon: TrendingUp },
   { to: "/wins", label: "Wins", icon: Sparkles },
   { to: "/impact", label: "Agency Impact", icon: BarChart3 },
+  { to: "/calculator", label: "Value Calculator", icon: Calculator },
   { to: "/hq", label: "Agency HQ", icon: Building2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

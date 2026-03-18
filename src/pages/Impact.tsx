@@ -89,6 +89,14 @@ export default function Impact() {
   const weeklyValueSaved = totalMonthlyValueSaved / 4;
   const avgValuePerClient = timeCostClients.length > 0 ? totalMonthlyValueSaved / timeCostClients.length : 0;
 
+  // 7. Overall Averages (All Clients with Time-Cost Analysis, regardless of status)
+  const allTimeCostClients = data.clients.filter(c => c.enableTimeCostAnalysis);
+  const overallTotalHoursSaved = allTimeCostClients.reduce((sum, c) => sum + (c.avgHoursSavedPerMonth || 0), 0);
+  const overallTotalValueSaved = allTimeCostClients.reduce((sum, c) => sum + ((c.avgHoursSavedPerMonth || 0) * (c.hourlyValue || 0)), 0);
+  
+  const overallAvgHoursPerClient = allTimeCostClients.length > 0 ? overallTotalHoursSaved / allTimeCostClients.length : 0;
+  const overallAvgValuePerClient = allTimeCostClients.length > 0 ? overallTotalValueSaved / allTimeCostClients.length : 0;
+
   const highlights = [
     { label: "Revenue Tracked", value: formatCurrency(revenueMetrics), icon: DollarSign, color: "text-emerald-600", description: "Aggregate client revenue generated" },
     { label: "Agency ROI", value: `${agencyROI}x`, icon: TrendingUp, color: "text-blue-600", description: "Revenue generated vs agency fees" },
@@ -226,9 +234,14 @@ export default function Impact() {
 
       {/* Time-Cost Analysis Section */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-indigo-600" />
-          <h2 className="text-xl font-bold text-[color:var(--im-navy)]">Time-Cost Analysis</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-indigo-600" />
+            <h2 className="text-xl font-bold text-[color:var(--im-navy)]">Time-Cost Analysis</h2>
+          </div>
+          <div className="text-xs font-medium text-muted-foreground px-3 py-1 bg-white border border-border/50 rounded-full shadow-sm">
+            Active Client Impact
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -281,6 +294,34 @@ export default function Impact() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Overall Averages Card */}
+        <Card className="rounded-3xl border-border/50 bg-white/40 shadow-sm border-dashed">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+                  <BarChart3 className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-[color:var(--im-navy)]">Historical Performance Averages</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Including all active and inactive client partnerships</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-8">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-indigo-600">{formatNumber(overallAvgHoursPerClient)}h</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Avg Monthly Hours Saved</div>
+                </div>
+                <div className="w-px h-8 bg-border/50" />
+                <div className="text-center">
+                  <div className="text-lg font-bold text-emerald-600">{formatCurrency(overallAvgValuePerClient)}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Avg Monthly Value Saved</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

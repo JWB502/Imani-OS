@@ -24,6 +24,7 @@ import FullTemplateBuilder from "@/pages/FullTemplateBuilder";
 import RoiDashboard from "@/pages/RoiDashboard";
 import Wins from "@/pages/Wins";
 import Impact from "@/pages/Impact";
+import ValueCalculator from "@/pages/ValueCalculator";
 import AgencyHq from "@/pages/AgencyHq";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
@@ -73,6 +74,7 @@ const App = () => (
                   <Route path="/roi" element={<RoiDashboard />} />
                   <Route path="/wins" element={<Wins />} />
                   <Route path="/impact" element={<Impact />} />
+                  <Route path="/calculator" element={<ValueCalculator />} />
                   <Route path="/hq" element={<AgencyHq />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
