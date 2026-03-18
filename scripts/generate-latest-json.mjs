@@ -98,6 +98,8 @@ async function main() {
       // Map universal to both apple and intel triples for v2
       platforms["darwin-aarch64"] = { url, signature };
       platforms["darwin-x86_64"] = { url, signature };
+      // Fallback for macOS
+      platforms["darwin"] = { url, signature };
       continue;
     }
 
@@ -114,6 +116,19 @@ async function main() {
 
     const finalKey = tripleMap[platformKey] || platformKey;
     platforms[finalKey] = { url, signature };
+
+    // Add fallback keys to satisfy Tauri v2's lookup logic
+    if (platformKey === "windows-x86_64") {
+      platforms["windows-x86_64-nsis"] = { url, signature };
+      platforms["windows-x86_64"] = { url, signature };
+    }
+    if (platformKey === "windows-aarch64") {
+      platforms["windows-aarch64-nsis"] = { url, signature };
+      platforms["windows-aarch64"] = { url, signature };
+    }
+    if (platformKey.startsWith("darwin-")) {
+      platforms["darwin"] = { url, signature };
+    }
   }
 
   if (!Object.keys(platforms).length) {
