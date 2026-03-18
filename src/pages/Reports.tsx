@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Link, useNavigate, useSearchParams, useOutletContext } from "react-router-dom";
-import { FileText, Plus, Search, Trash2, Filter, Copy } from "lucide-react";
+import { FileText, Plus, Search, Trash2, Filter, Copy, Check, ChevronsUpDown } from "lucide-react";
 
 import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -24,6 +24,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +57,7 @@ export default function Reports() {
   const query = (localQuery || globalSearchQuery).trim().toLowerCase();
 
   const [open, setOpen] = React.useState(false);
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
   const [selectedClientId, setSelectedClientId] = React.useState<string>(params.get("clientId") || "");
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>("");
 
@@ -58,6 +72,11 @@ export default function Reports() {
     data.clients.forEach(c => map.set(c.id, c));
     return map;
   }, [data.clients]);
+
+  const activeClients = React.useMemo(() => 
+    data.clients.filter(c => c.status === "Active" || c.status === "Lead"),
+    [data.clients]
+  );
 
   const filteredReports = data.reports
     .slice()
@@ -236,16 +255,50 @@ export default function Reports() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="client-select">Client</Label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger id="client-select" className="h-11 rounded-2xl">
-                  <SelectValue placeholder="Select a client" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl">
-                  {data.clients.filter(c => c.status === "Active" || c.status === "Lead").map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={comboboxOpen}
+                    className="h-11 w-full justify-between rounded-2xl bg-white/70 font-normal"
+                  >
+                    {selectedClientId
+                      ? activeClients.find((c) => c.id === selectedClientId)?.name
+                      : "Search for a client..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 rounded-2xl" align="start">
+                  <Command className="rounded-2xl">
+                    <CommandInput placeholder="Type client name..." />
+                    <CommandList>
+                      <CommandEmpty>No client found.</CommandEmpty>
+                      <CommandGroup>
+                        {activeClients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.name}
+                            onSelect={() => {
+                              setSelectedClientId(client.id);
+                              setComboboxOpen(false);
+                            }}
+                            className="rounded-xl mx-1"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4 text-primary",
+                                selectedClientId === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid gap-2">
