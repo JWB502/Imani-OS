@@ -9,6 +9,7 @@ import {
 import { Plus, Search, Trash2 } from "lucide-react";
 
 import { SoftButton } from "@/components/app/SoftButton";
+import { StarRating } from "@/components/app/StarRating";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
-import type { Client, ClientStatus } from "@/types/imani";
+import type { Client, ClientStatus, BillingType } from "@/types/imani";
 import { INDUSTRIES } from "@/types/imani";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,8 @@ type ClientDraft = Omit<Client, "id" | "createdAt" | "updatedAt"> & {
 const emptyDraft: ClientDraft = {
   name: "",
   status: "Lead",
+  billingType: "Retainer",
+  rating: 0,
   tags: [],
   serviceTypes: [],
   totalLifetimeValue: 0,
@@ -150,6 +153,8 @@ export default function Clients() {
       dashboardUrl: client.dashboardUrl,
       pmUrl: client.pmUrl,
       notes: client.notes,
+      billingType: client.billingType ?? "Retainer",
+      rating: client.rating ?? 0,
       tags: client.tags,
       serviceTypes: client.serviceTypes,
       industry: client.industry,
@@ -489,6 +494,18 @@ export default function Clients() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label>CRM Used</Label>
+                  <Input
+                    value={draft.crmUsed ?? ""}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, crmUsed: e.target.value }))
+                    }
+                    className="h-11 rounded-2xl"
+                    placeholder="e.g., Salesforce, HubSpot"
+                  />
+                </div>
+
+                <div className="grid gap-2">
                   <Label>City</Label>
                   <Input
                     value={draft.city ?? ""}
@@ -544,21 +561,61 @@ export default function Clients() {
             <TabsContent value="billing" className="mt-0">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Monthly retainer</Label>
-                  <Input
-                    value={draft.monthlyRetainer ?? ""}
-                    onChange={(e) =>
-                      setDraft((p) => ({
-                        ...p,
-                        monthlyRetainer: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      }))
+                  <Label>Billing Type</Label>
+                  <Select
+                    value={draft.billingType}
+                    onValueChange={(v) =>
+                      setDraft((p) => ({ ...p, billingType: v as BillingType }))
                     }
-                    className="h-11 rounded-2xl"
-                    inputMode="numeric"
-                  />
+                  >
+                    <SelectTrigger className="h-11 rounded-2xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Retainer">Retainer</SelectItem>
+                      <SelectItem value="Project">Project</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {draft.billingType === "Project" ? (
+                  <div className="grid gap-2 animate-in fade-in slide-in-from-top-1">
+                    <Label>Project Value</Label>
+                    <Input
+                      type="number"
+                      value={draft.oneTimeProjectValue ?? ""}
+                      onChange={(e) =>
+                        setDraft((p) => ({
+                          ...p,
+                          oneTimeProjectValue: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        }))
+                      }
+                      className="h-11 rounded-2xl"
+                      inputMode="decimal"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-2 animate-in fade-in slide-in-from-top-1">
+                    <Label>Monthly retainer</Label>
+                    <Input
+                      type="number"
+                      value={draft.monthlyRetainer ?? ""}
+                      onChange={(e) =>
+                        setDraft((p) => ({
+                          ...p,
+                          monthlyRetainer: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        }))
+                      }
+                      className="h-11 rounded-2xl"
+                      inputMode="decimal"
+                    />
+                  </div>
+                )}
 
                 <div className="grid gap-1 md:col-span-2">
                   <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3">
@@ -720,6 +777,19 @@ export default function Clients() {
             {/* NOTES TAB (LAST) */}
             <TabsContent value="notes" className="mt-0">
               <div className="grid gap-4">
+                <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-white/70 p-4 shadow-sm">
+                  <Label className="text-sm font-medium">Client rating</Label>
+                  <div className="flex items-center gap-4">
+                    <StarRating
+                      rating={draft.rating}
+                      onRatingChange={(r) => setDraft((p) => ({ ...p, rating: r }))}
+                    />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {draft.rating || 0} / 5 stars
+                    </span>
+                  </div>
+                </div>
+
                 <div className="grid gap-2">
                   <Label>Internal notes</Label>
                   <Textarea

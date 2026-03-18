@@ -70,16 +70,59 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setData(seed);
   }, []);
 
+  const calculateLtvForClient = (currentState: ImaniData, clientId: string) => {
+    const client = currentState.clients.find(c => c.id === clientId);
+    if (!client) return 0;
+
+    const billingType = client.billingType || "Retainer";
+
+    if (billingType === "Project") {
+      return client.oneTimeProjectValue || 0;
+    }
+
+    // For Retainer or Other (defaulting to Retainer behavior for LTV)
+    const expenseDef = currentState.metricDefinitions.find(
+      d => d.clientId === clientId && d.name === "Service Expenses"
+    );
+
+    if (!expenseDef) return 0;
+
+    const clientMetrics = currentState.monthlyMetrics.filter(m => m.clientId === clientId);
+    return clientMetrics.reduce((sum, m) => {
+      const val = m.values[expenseDef.id];
+      return sum + (typeof val === 'number' ? val : 0);
+    }, 0);
+  };
+
   const createClient = (c: any) => {
-    const nc = { ...c, id: createId("cl"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const nc = {
+      ...c,
+      id: createId("cl"),
+      billingType: c.billingType || "Retainer",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Initial LTV calculation
+    nc.totalLifetimeValue = calculateLtvForClient({ ...data, clients: [nc, ...data.clients] }, nc.id);
+    
     setData(p => ({ ...p, clients: [nc, ...p.clients] }));
     return nc;
   };
 
-  const updateClient = (id: string, c: any) => setData(p => ({
-    ...p,
-    clients: p.clients.map(x => x.id === id ? { ...x, ...c, updatedAt: new Date().toISOString() } : x)
-  }));
+  const updateClient = (id: string, c: any) => setData(p => {
+    const nextClients = p.clients.map(x => x.id === id ? { ...x, ...c, updatedAt: new Date().toISOString() } : x);
+    const updatedClients = nextClients.map(client => {
+      if (client.id === id) {
+        return {
+          ...client,
+          totalLifetimeValue: calculateLtvForClient({ ...p, clients: nextClients }, id)
+        };
+      }
+      return client;
+    });
+    return { ...p, clients: updatedClients };
+  });
 
   const deleteClient = (id: string) => setData(p => ({
     ...p,
@@ -147,7 +190,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       });
-      return { ...prev, monthlyMetrics: updatedMetrics };
+      
+      const affectedClientIds = Array.from(new Set(metrics.map(m => m.clientId)));
+      const finalClients = prev.clients.map(c => {
+        if (affectedClientIds.includes(c.id)) {
+          return {
+            ...c,
+            totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: updatedMetrics }, c.id)
+          };
+        }
+        return c;
+      });
+
+      return { ...prev, monthlyMetrics: updatedMetrics, clients: finalClients };
     });
   };
 
@@ -169,7 +224,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateMetricDefinition: (id: string, d: any) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.map(x => x.id === id ? { ...x, ...d } : x) })),
     deleteMetricDefinition: (id: string) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.filter(x => x.id !== id) })),
     upsertMonthlyMetric: (m: any) => bulkUpsertMonthlyMetrics([m]),
-    deleteMonthlyMetric: (id: string) => setData(p => ({ ...p, monthlyMetrics: p.monthlyMetrics.filter(x => x.id !== id) })),
+    deleteMonthlyMetric: (id: string) => setData(p => {
+      const metric = p.monthlyMetrics.find(m => m.id === id);
+      const nextMetrics = p.monthlyMetrics.filter(x => x.id !== id);
+      if (metric) {
+        const nextClients = p.clients.map(c => {
+          if (c.id === metric.clientId) {
+            return {
+              ...c,
+              totalLifetimeValue: calculateLtvForClient({ ...p, monthlyMetrics: nextMetrics }, c.id)
+            };
+          }
+          return c;
+        });
+        return { ...p, monthlyMetrics: nextMetrics, clients: nextClients };
+      }
+      return { ...p, monthlyMetrics: nextMetrics };
+    }),
     createSectionTemplate: (t: any) => { const nt = { ...t, id: createId("st"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, sectionTemplates: [...p.sectionTemplates, nt] })); return nt; },
     updateSectionTemplate: (id: string, t: any) => setData(p => ({ ...p, sectionTemplates: p.sectionTemplates.map(x => x.id === id ? { ...x, ...t, updatedAt: new Date().toISOString() } : x) })),
     duplicateSectionTemplate: (id: string) => { const t = data.sectionTemplates.find(x => x.id === id); if (!t) return; return value.createSectionTemplate({ ...t, name: `${t.name} (Copy)` }); },

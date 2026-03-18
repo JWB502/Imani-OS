@@ -19,6 +19,7 @@ export interface AppSettings {
 }
 
 export type ClientStatus = "Lead" | "Active" | "Paused" | "Former";
+export type BillingType = "Retainer" | "Project" | "Other";
 
 export const INDUSTRIES = [
   "Nonprofit",
@@ -48,7 +49,9 @@ export interface Client {
   dashboardUrl?: string;
   pmUrl?: string;
   crmUsed?: string;
+  billingType?: BillingType;
   status: ClientStatus;
+  rating?: number;
   startDate?: string;
   endDate?: string;
   tags: string[];

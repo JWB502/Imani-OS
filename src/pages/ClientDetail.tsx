@@ -4,6 +4,7 @@ import { FilePlus2, Image as ImageIcon, Pencil, Sparkles, TrendingUp, Trash2, Ex
 
 import { CampaignsTab } from "@/components/campaigns/CampaignsTab";
 import { SoftButton } from "@/components/app/SoftButton";
+import { StarRating } from "@/components/app/StarRating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -238,31 +239,37 @@ export default function ClientDetail() {
               </div>
             </div>
             <div className="rounded-2xl bg-[color:var(--im-navy)] p-4 text-white ring-1 ring-white/10">
-              <div className="text-xs text-white/80">Commercial snapshot</div>
-              <div className="mt-2 grid grid-cols-2 gap-3">
+              <div className="text-xs text-white/80 font-medium uppercase tracking-wider mb-2">Commercial snapshot</div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-4">
                 <div>
-                  <div className="text-xs text-white/70">Retainer</div>
-                  <div className="font-semibold">
-                    {formatCurrency(client.monthlyRetainer)}
+                  <div className="text-xs text-white/60">
+                    {client.billingType === "Project" ? "Project Value" : "Monthly Retainer"}
+                  </div>
+                  <div className="font-semibold text-sm">
+                    {formatCurrency(
+                      client.billingType === "Project"
+                        ? client.oneTimeProjectValue
+                        : client.monthlyRetainer
+                    )}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-white/70">Lifetime</div>
-                  <div className="font-semibold">
+                  <div className="text-xs text-white/60">Lifetime Value</div>
+                  <div className="font-semibold text-sm">
                     {formatCurrency(client.totalLifetimeValue)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-white/70">Start</div>
-                  <div className="font-semibold">{formatDate(client.startDate)}</div>
+                  <div className="text-xs text-white/60">Billing Type</div>
+                  <div className="font-semibold text-sm">{client.billingType || "Retainer"}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-white/70">CRM</div>
-                  <div className="font-semibold">{client.crmUsed || "—"}</div>
+                  <div className="text-xs text-white/60">CRM Used</div>
+                  <div className="font-semibold text-sm truncate">{client.crmUsed || "—"}</div>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+              <div className="mt-5 pt-4 border-t border-white/10 space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <div className="text-sm font-medium">Include in Agency Impact</div>
@@ -527,7 +534,19 @@ export default function ClientDetail() {
         <TabsContent value="notes" className="mt-4">
           <Card className="rounded-3xl border-border/70 bg-white/70 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Internal notes</CardTitle>
+              <div className="flex flex-col gap-1.5">
+                <CardTitle className="text-base">Internal notes</CardTitle>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={client.rating} readOnly />
+                  {client.rating ? (
+                    <span className="text-xs font-semibold text-muted-foreground/80">
+                      {client.rating} / 5
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-muted-foreground/40 italic">Unrated</span>
+                  )}
+                </div>
+              </div>
               {hasNotesChanges && (
                 <Button onClick={saveNotes} size="sm" className="rounded-xl">
                   Save Notes
