@@ -32,12 +32,9 @@ function lower(s) {
 function detectPlatformKey(filename) {
   const f = lower(filename);
 
-  // Modern Tauri v2 uses full triples. 
-  // We'll map simple suffixes to common v2 target triples.
   if (f.endsWith(".msi") || f.endsWith(".exe")) {
     if (f.includes("x64") || f.includes("x86_64")) return "windows-x86_64";
     if (f.includes("arm64") || f.includes("aarch64")) return "windows-aarch64";
-    // Fallback default
     return "windows-x86_64";
   }
 
@@ -95,29 +92,23 @@ async function main() {
     const url = `${baseUrl}/${encodeURIComponent(fileName)}`;
 
     if (platformKey === "darwin-universal") {
-      // Map universal to both apple and intel triples for v2
       platforms["darwin-aarch64"] = { url, signature };
       platforms["darwin-x86_64"] = { url, signature };
-      // Fallback for macOS
       platforms["darwin"] = { url, signature };
       continue;
     }
 
-    // Tauri v2 prefers full triples. 
-    // We map our simplified keys to the standard target triples.
     const tripleMap = {
       "windows-x86_64": "x86_64-pc-windows-msvc",
       "windows-aarch64": "aarch64-pc-windows-msvc",
       "darwin-x86_64": "x86_64-apple-darwin",
       "darwin-aarch64": "aarch64-apple-darwin",
-      "linux-x86_64": "x86_64-unknown-linux-gnu",
-      "linux-aarch64": "aarch64-unknown-linux-gnu"
     };
 
     const finalKey = tripleMap[platformKey] || platformKey;
     platforms[finalKey] = { url, signature };
 
-    // Add fallback keys to satisfy Tauri v2's lookup logic
+    // Add fallback keys for Tauri v2 compatibility
     if (platformKey === "windows-x86_64") {
       platforms["windows-x86_64-nsis"] = { url, signature };
       platforms["windows-x86_64"] = { url, signature };

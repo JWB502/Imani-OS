@@ -89,15 +89,20 @@ jobs:
         id: version_info
         shell: bash
         run: |
+          # Use the tag name from the trigger if available, otherwise use input
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION=${GITHUB_REF_NAME#v}
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION=${TAG_NAME#v}
           elif [[ "${{ inputs.version }}" != "" ]]; then
             VERSION="${{ inputs.version }}"
+            TAG_NAME="v$VERSION"
           else
+            # Fallback only if absolutely necessary
             VERSION=$(jq -r .version src-tauri/tauri.conf.json)
+            TAG_NAME="v$VERSION"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
 
       - name: Setup Node
         uses: actions/setup-node@v4
