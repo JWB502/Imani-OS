@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
+import { createRichTextDocFromPlainText } from "@/lib/richText";
 
 export default function Templates() {
   const { toast } = useToast();
@@ -92,7 +93,7 @@ export default function Templates() {
             id: `blk_${Date.now()}`,
             type: "richText",
             label: "Notes",
-            content: "",
+            content: createRichTextDocFromPlainText(""),
           } as any,
         ],
         archived: false,

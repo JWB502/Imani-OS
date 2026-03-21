@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { SoftButton, SoftIconButton } from "@/components/app/SoftButton";
+import { RichTextEditor } from "@/components/editor/RichTextEditor";
+import { RichTextRenderer } from "@/components/editor/RichTextRenderer";
 import { ReportPrintView } from "@/components/reports/ReportPrintView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -50,8 +53,14 @@ import { clamp } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { createId } from "@/lib/id";
 import { sanitizeForAI } from "@/lib/privacy";
+import {
+  deepCloneJson,
+  ensureRichTextDoc,
+  replaceTextInRichDoc,
+  richTextDocToPlainText,
+  createRichTextDocFromPlainText,
+} from "@/lib/richText";
 import type {
-  ChecklistItem,
   KPIItem,
   Report,
   ReportSection,
@@ -70,6 +79,16 @@ function replacePlaceholders(text: string, report: Report, clientName: string) {
   out = replaceToken(out, "{{Date}}", new Date().toLocaleDateString());
   out = replaceToken(out, "{{Analyst Name}}", report.analyst ?? "");
   return out;
+}
+
+function replacePlaceholdersInRichDoc(
+  doc: any,
+  report: Report,
+  clientName: string,
+) {
+  return replaceTextInRichDoc(ensureRichTextDoc(doc), (t) =>
+    replacePlaceholders(t, report, clientName),
+  );
 }
 
 function BlockCard({
@@ -110,14 +129,12 @@ function BlockCard({
 
       {block.type === "richText" ? (
         <div className="mt-3">
-          <Textarea
+          <RichTextEditor
             value={block.content}
-            onChange={(e) =>
-              onChange({ ...block, content: e.target.value } as SectionBlock)
-            }
-            className="min-h-28 rounded-2xl bg-white/70"
+            onChange={(content) => onChange({ ...block, content } as any)}
             placeholder="Write findings, notes, narrative…"
           />
+
           <div className="mt-2 text-xs text-muted-foreground">
             Placeholders supported:{" "}
             <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">
@@ -132,10 +149,14 @@ function BlockCard({
               {"{{Analyst Name}}"}
             </code>
           </div>
+
           <div className="mt-2 rounded-2xl border border-border/70 bg-white p-3">
             <div className="text-xs font-medium text-muted-foreground">Preview</div>
-            <div className="mt-1 whitespace-pre-wrap text-sm">
-              {replacePlaceholders(block.content, report, clientName) || "—"}
+            <div className="mt-2">
+              <RichTextRenderer
+                doc={replacePlaceholdersInRichDoc(block.content, report, clientName)}
+                className="text-[13px]"
+              />
             </div>
           </div>
         </div>
@@ -196,6 +217,41 @@ function BlockCard({
         </div>
       ) : null}
 
+      {block.type === "select" ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            value={block.options.join(", ")}
+            onChange={(e) => {
+              const options = e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              const nextValue = options.includes(block.value ?? "")
+                ? block.value
+                : options[0];
+              onChange({ ...block, options, value: nextValue } as any);
+            }}
+            className="h-10 rounded-2xl bg-white/70"
+            placeholder="Options (comma-separated)"
+          />
+          <Select
+            value={block.value ?? ""}
+            onValueChange={(v) => onChange({ ...block, value: v } as any)}
+          >
+            <SelectTrigger className="h-10 rounded-2xl bg-white/70">
+              <SelectValue placeholder="Select…" />
+            </SelectTrigger>
+            <SelectContent>
+              {block.options.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
       {block.type === "score" ? (
         <div className="mt-3">
           <div className="flex items-end justify-between">
@@ -220,6 +276,28 @@ function BlockCard({
             className="mt-3 min-h-20 rounded-2xl bg-white/70"
             placeholder="Optional note about the score…"
           />
+        </div>
+      ) : null}
+
+      {block.type === "progress" ? (
+        <div className="mt-3">
+          <div className="flex items-end justify-between">
+            <div className="text-sm font-medium">Progress</div>
+            <div className="text-sm text-muted-foreground">{block.value}%</div>
+          </div>
+          <Slider
+            value={[block.value]}
+            min={0}
+            max={100}
+            step={1}
+            className="mt-3"
+            onValueChange={(v) =>
+              onChange({ ...block, value: clamp(v[0] ?? 0, 0, 100) } as any)
+            }
+          />
+          <div className="mt-3 rounded-2xl bg-white p-3 ring-1 ring-border/60">
+            <Progress value={block.value} className="h-2" />
+          </div>
         </div>
       ) : null}
 
@@ -308,12 +386,58 @@ function BlockCard({
             className="h-10 rounded-2xl bg-white/70"
             placeholder="Caption (optional)"
           />
-          {block.url ? (
-            <img
-              src={block.url}
-              alt={block.caption || block.label}
-              className="mt-2 max-h-72 w-full rounded-2xl object-cover ring-1 ring-border/60"
+
+          <div className="grid gap-2">
+            <Label className="text-xs text-muted-foreground">Fit</Label>
+            <Select
+              value={block.fit ?? "contain"}
+              onValueChange={(v) => onChange({ ...block, fit: v as any } as any)}
+            >
+              <SelectTrigger className="h-10 rounded-2xl bg-white/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="contain">Contain (keep full image)</SelectItem>
+                <SelectItem value="cover">Cover (fill/crop)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-end justify-between">
+              <Label className="text-xs text-muted-foreground">Width</Label>
+              <div className="text-xs text-muted-foreground">
+                {Math.round(block.widthPct ?? 100)}%
+              </div>
+            </div>
+            <Slider
+              value={[block.widthPct ?? 100]}
+              min={30}
+              max={100}
+              step={1}
+              onValueChange={(v) =>
+                onChange({
+                  ...block,
+                  widthPct: clamp(v[0] ?? 100, 30, 100),
+                } as any)
+              }
             />
+          </div>
+
+          {block.url ? (
+            <div
+              className="mt-2 overflow-hidden rounded-2xl bg-white ring-1 ring-border/60"
+              style={{ width: `${block.widthPct ?? 100}%` }}
+            >
+              <img
+                src={block.url}
+                alt={block.caption || block.label}
+                className={
+                  "h-auto w-full " +
+                  ((block.fit ?? "contain") === "cover" ? "object-cover" : "object-contain")
+                }
+              />
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -367,7 +491,7 @@ function buildBlock(type: SectionBlock["type"]): SectionBlock {
         id: createId("blk"),
         type,
         label: "Narrative",
-        content: "",
+        content: createRichTextDocFromPlainText(""),
       };
     case "checklist":
       return {
@@ -376,8 +500,18 @@ function buildBlock(type: SectionBlock["type"]): SectionBlock {
         label: "Checklist",
         items: [{ id: createId("chk"), text: "", checked: false }],
       };
+    case "select":
+      return {
+        id: createId("blk"),
+        type,
+        label: "Dropdown",
+        options: ["Option A", "Option B"],
+        value: "Option A",
+      };
     case "score":
       return { id: createId("blk"), type, label: "Score", value: 50, max: 100 };
+    case "progress":
+      return { id: createId("blk"), type, label: "Progress", value: 50 };
     case "kpi":
       return {
         id: createId("blk"),
@@ -388,7 +522,14 @@ function buildBlock(type: SectionBlock["type"]): SectionBlock {
     case "table":
       return { id: createId("blk"), type, label: "Table", columns: [""], rows: [] };
     case "image":
-      return { id: createId("blk"), type, label: "Screenshot", url: "" };
+      return {
+        id: createId("blk"),
+        type,
+        label: "Screenshot",
+        url: "",
+        widthPct: 100,
+        fit: "contain",
+      };
   }
 }
 
@@ -416,6 +557,12 @@ export default function ReportBuilder() {
   const [aiInput, setAiInput] = React.useState("");
   const [aiOutput, setAiOutput] = React.useState("");
   const [aiLoading, setAiLoading] = React.useState(false);
+
+  const [addSectionOpen, setAddSectionOpen] = React.useState(false);
+  const [addSectionMode, setAddSectionMode] = React.useState<"blank" | "template">(
+    "blank",
+  );
+  const [selectedSectionTemplateId, setSelectedSectionTemplateId] = React.useState("");
 
   const printHostRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -459,7 +606,9 @@ export default function ReportBuilder() {
         .map((s) => {
           const rich = s.blocks
             .filter((b) => b.type === "richText")
-            .map((b) => `${b.label}: ${(b as any).content}`)
+            .map((b) =>
+              `${b.label}: ${richTextDocToPlainText(ensureRichTextDoc((b as any).content))}`,
+            )
             .join("\n");
           return `## ${s.title}\n${rich}`;
         })
@@ -514,6 +663,51 @@ export default function ReportBuilder() {
       fileName: `${client.name} — ${report.title}.pdf`,
       pageNumbers: report.pdfPageNumbers ?? settings.pdfPageNumbers,
     });
+  }
+
+  const availableSectionTemplates = data.sectionTemplates
+    .filter((s) => !s.archived)
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  function addBlankSection() {
+    updateReport(report.id, {
+      sections: [
+        ...report.sections,
+        {
+          id: createId("rs"),
+          title: "New section",
+          blocks: [buildBlock("richText")],
+        },
+      ],
+    });
+    toast({ title: "Section added." });
+  }
+
+  function addSectionFromTemplate(sectionTemplateId: string) {
+    const st = data.sectionTemplates.find((s) => s.id === sectionTemplateId);
+    if (!st) return;
+
+    updateReport(report.id, {
+      sections: [
+        ...report.sections,
+        {
+          id: createId("rs"),
+          title: st.name,
+          blocks: st.blocks.map((b) => {
+            if (b.type === "richText") {
+              return {
+                ...b,
+                id: createId("blk"),
+                content: deepCloneJson(ensureRichTextDoc((b as any).content)),
+              };
+            }
+            return { ...b, id: createId("blk") };
+          }),
+        },
+      ],
+    });
+    toast({ title: "Section inserted from template." });
   }
 
   return (
@@ -734,6 +928,31 @@ export default function ReportBuilder() {
                   onChange={(patch) => updateReportSection(report.id, s.id, patch)}
                 />
               ))}
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button
+                  type="button"
+                  className="rounded-2xl"
+                  onClick={() => {
+                    setAddSectionMode("blank");
+                    setAddSectionOpen(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add blank section
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                  onClick={() => {
+                    setAddSectionMode("template");
+                    setSelectedSectionTemplateId(availableSectionTemplates[0]?.id ?? "");
+                    setAddSectionOpen(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Insert section template
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -876,6 +1095,66 @@ export default function ReportBuilder() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={addSectionOpen} onOpenChange={setAddSectionOpen}>
+        <DialogContent className="max-w-lg rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {addSectionMode === "blank" ? "Add blank section" : "Insert section template"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {addSectionMode === "blank" ? (
+            <div className="text-sm text-muted-foreground">
+              Adds a new section at the end of the report. You can then add blocks like rich text, dropdowns, tables, and images.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Section template</Label>
+              <Select
+                value={selectedSectionTemplateId}
+                onValueChange={setSelectedSectionTemplateId}
+              >
+                <SelectTrigger className="h-11 rounded-2xl">
+                  <SelectValue placeholder="Select a section template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSectionTemplates.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              className="rounded-2xl"
+              onClick={() => setAddSectionOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-2xl"
+              onClick={() => {
+                if (addSectionMode === "blank") {
+                  addBlankSection();
+                  setAddSectionOpen(false);
+                  return;
+                }
+                if (!selectedSectionTemplateId) return;
+                addSectionFromTemplate(selectedSectionTemplateId);
+                setAddSectionOpen(false);
+              }}
+            >
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -925,46 +1204,24 @@ function SectionEditor({
         ))}
 
         <div className="flex flex-wrap gap-2">
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() =>
-              onChange({ blocks: [...section.blocks, buildBlock("richText")] })
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add rich text
-          </SoftButton>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() =>
-              onChange({ blocks: [...section.blocks, buildBlock("checklist")] })
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add checklist
-          </SoftButton>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() => onChange({ blocks: [...section.blocks, buildBlock("kpi")] })}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add KPI block
-          </SoftButton>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() => onChange({ blocks: [...section.blocks, buildBlock("score")] })}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add score
-          </SoftButton>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() => onChange({ blocks: [...section.blocks, buildBlock("image")] })}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add image
-          </SoftButton>
-          <SoftButton
-            className="rounded-2xl bg-white"
-            onClick={() => onChange({ blocks: [...section.blocks, buildBlock("table")] })}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add table
-          </SoftButton>
+          {([
+            "richText",
+            "checklist",
+            "select",
+            "table",
+            "kpi",
+            "score",
+            "progress",
+            "image",
+          ] as const).map((t) => (
+            <SoftButton
+              key={t}
+              className="rounded-2xl bg-white"
+              onClick={() => onChange({ blocks: [...section.blocks, buildBlock(t)] })}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add {t}
+            </SoftButton>
+          ))}
         </div>
 
         <div className="rounded-3xl border border-border/70 bg-white/70 p-4">

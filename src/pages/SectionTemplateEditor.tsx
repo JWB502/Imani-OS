@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
 import { SoftButton, SoftIconButton } from "@/components/app/SoftButton";
+import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,16 +12,29 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import { clamp } from "@/lib/format";
 import { createId } from "@/lib/id";
+import { createRichTextDocFromPlainText } from "@/lib/richText";
 import type { KPIItem, SectionBlock, SectionTemplate } from "@/types/imani";
 
 function buildBlock(type: SectionBlock["type"]): SectionBlock {
   switch (type) {
     case "richText":
-      return { id: createId("blk"), type, label: "Notes", content: "" };
+      return {
+        id: createId("blk"),
+        type,
+        label: "Narrative",
+        content: createRichTextDocFromPlainText(""),
+      };
     case "checklist":
       return {
         id: createId("blk"),
@@ -40,7 +54,29 @@ function buildBlock(type: SectionBlock["type"]): SectionBlock {
     case "table":
       return { id: createId("blk"), type, label: "Table", columns: [""], rows: [] };
     case "image":
-      return { id: createId("blk"), type, label: "Image", url: "" };
+      return {
+        id: createId("blk"),
+        type,
+        label: "Image",
+        url: "",
+        widthPct: 100,
+        fit: "contain",
+      };
+    case "select":
+      return {
+        id: createId("blk"),
+        type,
+        label: "Dropdown",
+        options: ["Option A", "Option B"],
+        value: "Option A",
+      };
+    case "progress":
+      return {
+        id: createId("blk"),
+        type,
+        label: "Progress",
+        value: 50,
+      };
   }
 }
 
@@ -77,12 +113,14 @@ function BlockEditor({
       </div>
 
       {block.type === "richText" ? (
-        <Textarea
-          value={block.content}
-          onChange={(e) => onChange({ ...block, content: e.target.value } as any)}
-          className="mt-3 min-h-28 rounded-2xl bg-white/70"
-          placeholder="Template default content…"
-        />
+        <div className="mt-3">
+          <RichTextEditor
+            value={block.content}
+            onChange={(content) => onChange({ ...block, content } as any)}
+            placeholder="Write default content for this template…"
+          />
+          <div className="mt-2 text-xs text-muted-foreground">Autosaved.</div>
+        </div>
       ) : null}
 
       {block.type === "checklist" ? (
@@ -171,6 +209,23 @@ function BlockEditor({
         </div>
       ) : null}
 
+      {block.type === "progress" ? (
+        <div className="mt-3">
+          <div className="flex items-end justify-between">
+            <div className="text-sm font-medium">Default progress</div>
+            <div className="text-sm text-muted-foreground">{block.value}%</div>
+          </div>
+          <Slider
+            value={[block.value]}
+            min={0}
+            max={100}
+            step={1}
+            className="mt-3"
+            onValueChange={(v) => onChange({ ...block, value: clamp(v[0] ?? 0, 0, 100) } as any)}
+          />
+        </div>
+      ) : null}
+
       {block.type === "kpi" ? (
         <div className="mt-3 space-y-2">
           {block.items.map((it) => (
@@ -229,6 +284,45 @@ function BlockEditor({
         </div>
       ) : null}
 
+      {block.type === "select" ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            value={block.options.join(", ")}
+            onChange={(e) => {
+              const options = e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              const nextValue = options.includes(block.value ?? "")
+                ? block.value
+                : options[0];
+              onChange({ ...block, options, value: nextValue } as any);
+            }}
+            className="h-10 rounded-2xl bg-white/70"
+            placeholder="Options (comma-separated)"
+          />
+
+          <div className="grid gap-2">
+            <Label className="text-xs text-muted-foreground">Default selection</Label>
+            <Select
+              value={block.value ?? ""}
+              onValueChange={(v) => onChange({ ...block, value: v } as any)}
+            >
+              <SelectTrigger className="h-10 rounded-2xl bg-white/70">
+                <SelectValue placeholder="Select a default" />
+              </SelectTrigger>
+              <SelectContent>
+                {block.options.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      ) : null}
+
       {block.type === "image" ? (
         <div className="mt-3 space-y-2">
           <Input
@@ -243,6 +337,58 @@ function BlockEditor({
             className="h-10 rounded-2xl bg-white/70"
             placeholder="Caption (optional)"
           />
+
+          <div className="grid gap-2">
+            <Label className="text-xs text-muted-foreground">Fit</Label>
+            <Select
+              value={block.fit ?? "contain"}
+              onValueChange={(v) =>
+                onChange({ ...block, fit: v as any } as any)
+              }
+            >
+              <SelectTrigger className="h-10 rounded-2xl bg-white/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="contain">Contain (keep full image)</SelectItem>
+                <SelectItem value="cover">Cover (fill/crop)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-end justify-between">
+              <Label className="text-xs text-muted-foreground">Width</Label>
+              <div className="text-xs text-muted-foreground">
+                {Math.round(block.widthPct ?? 100)}%
+              </div>
+            </div>
+            <Slider
+              value={[block.widthPct ?? 100]}
+              min={30}
+              max={100}
+              step={1}
+              onValueChange={(v) =>
+                onChange({ ...block, widthPct: clamp(v[0] ?? 100, 30, 100) } as any)
+              }
+            />
+          </div>
+
+          {block.url ? (
+            <div
+              className="mt-2 overflow-hidden rounded-2xl bg-white ring-1 ring-border/60"
+              style={{ width: `${block.widthPct ?? 100}%` }}
+            >
+              <img
+                src={block.url}
+                alt={block.caption || block.label}
+                className={
+                  "h-auto w-full " +
+                  ((block.fit ?? "contain") === "cover" ? "object-cover" : "object-contain")
+                }
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -279,6 +425,9 @@ function BlockEditor({
             className="min-h-28 rounded-2xl bg-white/70"
             placeholder="Rows (one per line, use | between cells)"
           />
+          <div className="text-xs text-muted-foreground">
+            Example: <span className="font-mono">Competitor | Strength | Gap</span>
+          </div>
         </div>
       ) : null}
     </div>
@@ -392,10 +541,12 @@ export default function SectionTemplateEditor() {
               {([
                 "richText",
                 "checklist",
+                "select",
+                "table",
                 "kpi",
                 "score",
+                "progress",
                 "image",
-                "table",
               ] as const).map((t) => (
                 <SoftButton
                   key={t}
@@ -417,7 +568,6 @@ export default function SectionTemplateEditor() {
               <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">{"{{City / State}}"}</code>,{" "}
               <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">{"{{Report Period}}"}</code>
             </div>
-
           </CardContent>
         </Card>
       </div>

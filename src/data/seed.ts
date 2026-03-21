@@ -5,13 +5,19 @@ import type {
   SectionBlock,
   SectionTemplate,
 } from "@/types/imani";
+import { createRichTextDocFromPlainText } from "@/lib/richText";
 
 function nowIso() {
   return new Date().toISOString();
 }
 
 function rich(label: string, content: string): SectionBlock {
-  return { id: createId("blk"), type: "richText", label, content };
+  return {
+    id: createId("blk"),
+    type: "richText",
+    label,
+    content: createRichTextDocFromPlainText(content),
+  };
 }
 
 function checklist(label: string, items: string[]): SectionBlock {

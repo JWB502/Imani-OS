@@ -9,6 +9,7 @@ import {
 import { createSeedData } from '@/data/seed';
 import { readJson, writeJson } from '@/lib/storage';
 import { createId } from '@/lib/id';
+import { deepCloneJson, ensureRichTextDoc } from "@/lib/richText";
 
 const DATA_KEY = "imani-os:data:v1";
 
@@ -55,10 +56,35 @@ interface DataContextType {
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
+function migrateRichTextInSectionBlocks(blocks: any[]) {
+  return (blocks ?? []).map((b) => {
+    if (!b || typeof b !== "object") return b;
+    if (b.type === "richText") return { ...b, content: ensureRichTextDoc(b.content) };
+    return b;
+  });
+}
+
+function migrateData(saved: ImaniData): ImaniData {
+  return {
+    ...saved,
+    sectionTemplates: (saved.sectionTemplates ?? []).map((st: any) => ({
+      ...st,
+      blocks: migrateRichTextInSectionBlocks(st.blocks),
+    })),
+    reports: (saved.reports ?? []).map((r: any) => ({
+      ...r,
+      sections: (r.sections ?? []).map((s: any) => ({
+        ...s,
+        blocks: migrateRichTextInSectionBlocks(s.blocks),
+      })),
+    })),
+  };
+}
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [data, setData] = useState<ImaniData>(() => {
     const saved = readJson<ImaniData>(DATA_KEY);
-    return saved || createSeedData();
+    return saved ? migrateData(saved) : createSeedData();
   });
 
   useEffect(() => {
@@ -119,84 +145,59 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return client;
     });
+
     return { ...p, clients: updatedClients };
   });
 
-  const deleteClient = (id: string) => setData(p => ({
-    ...p,
-    clients: p.clients.filter(x => x.id !== id),
-    reports: p.reports.filter(r => r.clientId !== id),
-    wins: p.wins.filter(w => w.clientId !== id),
-    campaigns: p.campaigns.filter(c => c.clientId !== id),
-    monthlyMetrics: p.monthlyMetrics.filter(m => m.clientId !== id)
-  }));
+  const deleteClient = (id: string) => setData(p => ({ ...p, clients: p.clients.filter(x => x.id !== id) }));
 
-  const ensureStandardMetricsForClient = useCallback((cid: string) => {
+  const ensureStandardMetricsForClient = (clientId: string) => {
     setData(prev => {
-      const existing = prev.metricDefinitions.filter(m => m.clientId === cid);
-      const hasRev = existing.some(m => m.isStandard && m.name === "Revenue");
-      const hasExp = existing.some(m => m.isStandard && m.name === "Service Expenses");
+      const client = prev.clients.find(c => c.id === clientId);
+      if (!client) return prev;
 
-      if (hasRev && hasExp) return prev;
+      const standardMetrics = ["Service Expenses", "Hours Saved", "Revenue Generated"];
+      const existingStandardMetrics = prev.metricDefinitions.filter(
+        d => d.clientId === clientId && standardMetrics.includes(d.name)
+      );
 
-      const nextDefs = [...prev.metricDefinitions];
-      if (!hasRev) {
-        nextDefs.push({ 
-          id: createId("md"), 
-          clientId: cid, 
-          name: "Revenue", 
-          kind: "currency", 
-          isStandard: true 
-        });
-      }
-      if (!hasExp) {
-        nextDefs.push({ 
-          id: createId("md"), 
-          clientId: cid, 
-          name: "Service Expenses", 
-          kind: "currency", 
-          isStandard: true 
-        });
+      if (existingStandardMetrics.length === standardMetrics.length) {
+        return prev;
       }
 
-      return { ...prev, metricDefinitions: nextDefs };
+      const newMetrics = standardMetrics
+        .filter(name => !existingStandardMetrics.some(m => m.name === name))
+        .map(name => ({
+          id: createId("md"),
+          clientId,
+          name,
+          kind: (name === "Service Expenses" ? "currency" : "number") as "currency" | "number",
+          isStandard: true
+        }));
+
+      return {
+        ...prev,
+        metricDefinitions: [...prev.metricDefinitions, ...newMetrics]
+      };
     });
-  }, []);
+  };
 
   const bulkUpsertMonthlyMetrics = (metrics: any[]) => {
-    const now = new Date().toISOString();
     setData(prev => {
-      let updatedMetrics = [...prev.monthlyMetrics];
-      metrics.forEach(newMetric => {
-        const idx = updatedMetrics.findIndex(m => m.clientId === newMetric.clientId && m.month === newMetric.month);
-        if (idx >= 0) {
-          updatedMetrics[idx] = { 
-            ...updatedMetrics[idx], 
-            ...newMetric,
-            values: { ...updatedMetrics[idx].values, ...newMetric.values },
-            updatedAt: now 
-          };
+      const updatedMetrics = [...prev.monthlyMetrics];
+      metrics.forEach(metric => {
+        const index = updatedMetrics.findIndex(m => m.id === metric.id);
+        if (index !== -1) {
+          updatedMetrics[index] = { ...updatedMetrics[index], ...metric, updatedAt: new Date().toISOString() };
         } else {
-          updatedMetrics.push({ 
-            includeInAgencyImpact: true,
-            ...newMetric, 
-            id: createId("mm"), 
-            createdAt: now, 
-            updatedAt: now 
-          });
+          updatedMetrics.push({ ...metric, id: createId("mm"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
         }
       });
-      
-      const affectedClientIds = Array.from(new Set(metrics.map(m => m.clientId)));
-      const finalClients = prev.clients.map(c => {
-        if (affectedClientIds.includes(c.id)) {
-          return {
-            ...c,
-            totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: updatedMetrics }, c.id)
-          };
-        }
-        return c;
-      });
+
+      const finalClients = prev.clients.map(client => ({
+        ...client,
+        totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: updatedMetrics }, client.id)
+      }));
 
       return { ...prev, monthlyMetrics: updatedMetrics, clients: finalClients };
     });
@@ -255,7 +256,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           id: createId("rs"),
           title: st.name,
-          blocks: st.blocks.map(b => ({ ...b, id: createId("blk") })),
+          blocks: st.blocks.map(b => {
+            if (b.type === "richText") {
+              return { ...b, id: createId("blk"), content: deepCloneJson(ensureRichTextDoc((b as any).content)) };
+            }
+            return { ...b, id: createId("blk") };
+          }),
         };
       }).filter(Boolean) as ReportSection[];
 

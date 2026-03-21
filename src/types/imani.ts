@@ -141,12 +141,22 @@ export interface KPIItem {
 }
 
 export type SectionBlock =
-  | { id: string; type: "richText"; label: string; content: string }
+  | { id: string; type: "richText"; label: string; content: any }
   | { id: string; type: "checklist"; label: string; items: ChecklistItem[] }
   | { id: string; type: "score"; label: string; value: number; max: number; note?: string }
   | { id: string; type: "kpi"; label: string; items: KPIItem[] }
   | { id: string; type: "table"; label: string; columns: string[]; rows: string[][] }
-  | { id: string; type: "image"; label: string; url: string; caption?: string };
+  | {
+      id: string;
+      type: "image";
+      label: string;
+      url: string;
+      caption?: string;
+      widthPct?: number;
+      fit?: "contain" | "cover";
+    }
+  | { id: string; type: "select"; label: string; options: string[]; value?: string }
+  | { id: string; type: "progress"; label: string; value: number };
 
 export interface SectionTemplate {
   id: string;
