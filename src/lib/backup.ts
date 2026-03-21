@@ -1,3 +1,4 @@
+import { migrateAppData } from "@/lib/documentMigration";
 import type { AppData, AppSettings } from "@/types/imani";
 import { DATA_KEY_V2 } from "@/lib/documentMigration";
 import { readJson, writeJson } from "@/lib/storage";
@@ -10,6 +11,13 @@ export type BackupPayloadV2 = {
   exportedAt: string;
   settings: Omit<AppSettings, "openAiApiKey" | "openRouterApiKey">;
   data: AppData;
+};
+
+type LegacyBackupPayloadV1 = {
+  version: 1;
+  exportedAt: string;
+  settings: Omit<AppSettings, "openAiApiKey" | "openRouterApiKey">;
+  data: unknown;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -39,7 +47,7 @@ function validateAppSettings(value: unknown): Omit<AppSettings, "openAiApiKey" |
   return { agencyName, openAiModel, analysts, pdfPageNumbers, redactionStyle, aiProvider };
 }
 
-function validateAppData(value: unknown): AppData {
+function validateDocumentAppData(value: unknown): AppData {
   if (!isObject(value)) throw new Error("Invalid backup: data must be an object.");
 
   const arr = (key: keyof AppData) => {
@@ -64,15 +72,30 @@ function validateAppData(value: unknown): AppData {
 
 export function validateBackupPayload(json: unknown): BackupPayloadV2 {
   if (!isObject(json)) throw new Error("Invalid backup: root must be an object.");
-  if (json.version !== 2) throw new Error("Invalid backup: unsupported version.");
   if (typeof json.exportedAt !== "string") throw new Error("Invalid backup: exportedAt must be a string.");
 
-  return {
-    version: 2,
-    exportedAt: json.exportedAt,
-    settings: validateAppSettings(json.settings),
-    data: validateAppData(json.data),
-  };
+  const settings = validateAppSettings(json.settings);
+
+  if (json.version === 2) {
+    return {
+      version: 2,
+      exportedAt: json.exportedAt,
+      settings,
+      data: validateDocumentAppData(json.data),
+    };
+  }
+
+  if (json.version === 1) {
+    const legacy = json as unknown as LegacyBackupPayloadV1;
+    return {
+      version: 2,
+      exportedAt: legacy.exportedAt,
+      settings,
+      data: migrateAppData(legacy.data),
+    };
+  }
+
+  throw new Error("Invalid backup: unsupported version.");
 }
 
 function yyyymmdd(date: Date) {
