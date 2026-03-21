@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { Copy, Layers, Plus, Search, Trash2 } from "lucide-react";
+import { Copy, FileStack, Layers2, Plus, Search, Trash2, WandSparkles } from "lucide-react";
 
-import { SoftButton } from "@/components/app/SoftButton";
 import type { AppLayoutOutletContext } from "@/components/app/AppLayout";
+import { DocumentStatusBadge } from "@/components/documents/DocumentToolbar";
+import { SoftButton } from "@/components/app/SoftButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,339 +16,199 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
-import { createRichTextDocFromPlainText } from "@/lib/richText";
+import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/format";
+import { countDocumentPages, createDocumentPage } from "@/lib/documentTree";
+import type { DocumentTemplateKind } from "@/types/imani";
 
 export default function Templates() {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const {
-    data,
-    createSectionTemplate,
-    updateSectionTemplate,
-    duplicateSectionTemplate,
-    deleteSectionTemplate,
-    createFullTemplate,
-    updateFullTemplate,
-    duplicateFullTemplate,
-    deleteFullTemplate,
-  } = useData();
-
+  const { toast } = useToast();
+  const { data, createDocumentTemplate, duplicateDocumentTemplate, updateDocumentTemplate, deleteDocumentTemplate } = useData();
   const { globalSearchQuery } = useOutletContext<AppLayoutOutletContext>();
-  const [localQuery, setLocalQuery] = React.useState("");
-  const query = (localQuery || globalSearchQuery).trim().toLowerCase();
-
-  const [tab, setTab] = React.useState<"sections" | "full">("full");
-
-  const fullTemplates = data.fullTemplates
-    .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .filter((t) => {
-      if (!query) return true;
-      const hay = [t.name, t.description, t.archived ? "archived" : "active"]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(query);
-    });
-
-  const sectionTemplates = data.sectionTemplates
-    .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .filter((t) => {
-      if (!query) return true;
-      const hay = [t.name, t.description, t.archived ? "archived" : "active"]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(query);
-    });
 
   const [open, setOpen] = React.useState(false);
-  const [kind, setKind] = React.useState<"section" | "full">("full");
+  const [kind, setKind] = React.useState<DocumentTemplateKind>("template");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [localQuery, setLocalQuery] = React.useState("");
 
-  function openCreate(k: "section" | "full") {
-    setKind(k);
+  const query = (localQuery || globalSearchQuery).trim().toLowerCase();
+  const templates = data.documentTemplates
+    .slice()
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .filter((template) => {
+      if (!query) return true;
+      const haystack = [
+        template.name,
+        template.description,
+        template.kind,
+        template.archived ? "archived" : "active",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+
+  function openCreate(nextKind: DocumentTemplateKind) {
+    setKind(nextKind);
     setName("");
     setDescription("");
     setOpen(true);
   }
 
+  function routeForTemplate(templateId: string, templateKind: DocumentTemplateKind) {
+    return templateKind === "fragment" ? `/templates/sections/${templateId}` : `/templates/full/${templateId}`;
+  }
+
   function save() {
     if (!name.trim()) {
-      toast({ title: "Name is required." });
+      toast({ title: "Template name is required." });
       return;
     }
 
-    if (kind === "section") {
-      const t = createSectionTemplate({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        blocks: [
-          {
-            id: `blk_${Date.now()}`,
-            type: "richText",
-            label: "Notes",
-            content: createRichTextDocFromPlainText(""),
-          } as any,
-        ],
-        archived: false,
-      });
-      toast({ title: "Section template created." });
-      setOpen(false);
-      navigate(`/templates/sections/${t.id}`);
-    } else {
-      const t = createFullTemplate({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        sectionTemplateIds: [],
-        archived: false,
-      });
-      toast({ title: "Full template created." });
-      setOpen(false);
-      navigate(`/templates/full/${t.id}`);
-    }
+    const template = createDocumentTemplate({
+      kind,
+      name: name.trim(),
+      description: description.trim() || undefined,
+      pages: [createDocumentPage(kind === "fragment" ? "Reusable fragment" : "Overview", null, 0)],
+    });
+
+    toast({ title: kind === "fragment" ? "Reusable fragment created." : "Template created." });
+    setOpen(false);
+    navigate(routeForTemplate(template.id, kind));
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="text-sm font-medium text-muted-foreground">
-            Reusable building blocks + assembled reports
+      <div className="rounded-[32px] border border-border/70 bg-white/75 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">Template library</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--im-navy)]">Notion-style templates</h1>
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+              Templates and reusable fragments now live in one document-first library, with nested pages, richer blocks, and migration notes where legacy content was simplified.
+            </p>
           </div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Templates</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => openCreate("full")} className="rounded-2xl shadow-sm">
-            <Plus className="mr-2 h-4 w-4" /> New full template
-          </Button>
-          <Button
-            onClick={() => openCreate("section")}
-            variant="outline"
-            className="rounded-2xl border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 shadow-sm"
-          >
-            <Plus className="mr-2 h-4 w-4" /> New section template
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => openCreate("template")} className="rounded-2xl">
+              <Plus className="mr-2 h-4 w-4" /> New template
+            </Button>
+            <Button variant="outline" className="rounded-2xl" onClick={() => openCreate("fragment")}>
+              <WandSparkles className="mr-2 h-4 w-4" /> New reusable fragment
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={localQuery}
-            onChange={(e) => setLocalQuery(e.target.value)}
-            placeholder="Search templates…"
-            className="h-10 rounded-2xl bg-white/70 pl-9"
+            onChange={(event) => setLocalQuery(event.target.value)}
+            className="h-11 rounded-2xl bg-white/80 pl-10"
+            placeholder="Search templates, fragments, or archived items…"
           />
         </div>
-        <div className="text-sm text-muted-foreground">
-          {tab === "full" ? fullTemplates.length : sectionTemplates.length} shown
-        </div>
+        <div className="text-sm text-muted-foreground">{templates.length} items</div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList className="h-11 rounded-2xl bg-white/70 p-1">
-          <TabsTrigger value="full" className="rounded-2xl">
-            Full templates
-          </TabsTrigger>
-          <TabsTrigger value="sections" className="rounded-2xl">
-            Section templates
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="full" className="mt-4">
-          <div className="grid gap-3">
-            {fullTemplates.map((t) => (
-              <div
-                key={t.id}
-                className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                      <Layers className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="truncate font-medium">
-                        <Link
-                          to={`/templates/full/${t.id}`}
-                          className="underline-offset-4 hover:underline"
-                        >
-                          {t.name}
-                        </Link>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {t.sectionTemplateIds.length} sections
-                        {t.description ? ` • ${t.description}` : ""}
-                      </div>
-                    </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {templates.map((template) => (
+          <div key={template.id} className="rounded-[32px] border border-border/70 bg-white/75 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                    {template.kind === "template" ? <Layers2 className="h-5 w-5" /> : <FileStack className="h-5 w-5" />}
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {t.archived ? (
-                    <Badge className="rounded-full bg-slate-200 text-slate-900">
-                      Archived
-                    </Badge>
-                  ) : (
-                    <Badge className="rounded-full bg-primary text-primary-foreground">
-                      Active
-                    </Badge>
-                  )}
-                  <SoftButton
-                    className="rounded-2xl bg-white"
-                    onClick={() => {
-                      const dupe = duplicateFullTemplate(t.id);
-                      if (dupe) toast({ title: "Template duplicated." });
-                    }}
-                  >
-                    <Copy className="mr-2 h-4 w-4" /> Duplicate
-                  </SoftButton>
-                  <SoftButton
-                    className="rounded-2xl bg-white"
-                    onClick={() => updateFullTemplate(t.id, { archived: !t.archived })}
-                  >
-                    {t.archived ? "Unarchive" : "Archive"}
-                  </SoftButton>
-                  <Button
-                    variant="destructive"
-                    className="rounded-2xl"
-                    onClick={() => {
-                      if (!confirm(`Delete full template “${t.name}”?`)) return;
-                      deleteFullTemplate(t.id);
-                      toast({ title: "Template deleted." });
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {fullTemplates.length === 0 ? (
-              <div className="rounded-3xl border border-border/70 bg-white/70 p-10 text-center">
-                <div className="text-sm font-medium">No full templates found</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Try a different search or create a new full template.
-                </div>
-                <Button onClick={() => openCreate("full")} className="mt-4 rounded-2xl">
-                  <Plus className="mr-2 h-4 w-4" /> Create a full template
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="sections" className="mt-4">
-          <div className="grid gap-3">
-            {sectionTemplates.map((t) => (
-              <div
-                key={t.id}
-                className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-white/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-medium">
-                    <Link
-                      to={`/templates/sections/${t.id}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {t.name}
+                  <div className="min-w-0">
+                    <Link to={routeForTemplate(template.id, template.kind)} className="block truncate text-lg font-semibold tracking-tight hover:text-primary">
+                      {template.name}
                     </Link>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {t.blocks.length} blocks
-                    {t.description ? ` • ${t.description}` : ""}
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      <DocumentStatusBadge label={template.kind === "template" ? "Template" : "Reusable fragment"} tone={template.kind === "template" ? "default" : "muted"} />
+                      {template.archived ? <DocumentStatusBadge label="Archived" tone="warning" /> : <DocumentStatusBadge label="Active" tone="success" />}
+                      {template.migrationWarnings?.length ? <Badge className="rounded-full bg-amber-100 text-amber-900">Needs review</Badge> : null}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {t.archived ? (
-                    <Badge className="rounded-full bg-slate-200 text-slate-900">
-                      Archived
-                    </Badge>
-                  ) : (
-                    <Badge className="rounded-full bg-primary text-primary-foreground">
-                      Active
-                    </Badge>
-                  )}
-                  <SoftButton
-                    className="rounded-2xl bg-white"
-                    onClick={() => {
-                      const dupe = duplicateSectionTemplate(t.id);
-                      if (dupe) toast({ title: "Template duplicated." });
-                    }}
-                  >
-                    <Copy className="mr-2 h-4 w-4" /> Duplicate
-                  </SoftButton>
-                  <SoftButton
-                    className="rounded-2xl bg-white"
-                    onClick={() => updateSectionTemplate(t.id, { archived: !t.archived })}
-                  >
-                    {t.archived ? "Unarchive" : "Archive"}
-                  </SoftButton>
-                  <Button
-                    variant="destructive"
-                    className="rounded-2xl"
-                    onClick={() => {
-                      if (!confirm(`Delete section template “${t.name}”?`)) return;
-                      deleteSectionTemplate(t.id);
-                      toast({ title: "Template deleted." });
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </div>
+                <p className="mt-4 text-sm text-muted-foreground">{template.description || "No description yet."}</p>
               </div>
-            ))}
+              <div className="text-right text-sm text-muted-foreground">
+                <div>{countDocumentPages(template.pages)} pages</div>
+                <div className="mt-1">Updated {formatDate(template.updatedAt)}</div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <SoftButton
+                className="rounded-2xl"
+                onClick={() => {
+                  const duplicate = duplicateDocumentTemplate(template.id);
+                  if (!duplicate) return;
+                  toast({ title: `${template.kind === "template" ? "Template" : "Fragment"} duplicated.` });
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Duplicate
+              </SoftButton>
+              <SoftButton
+                className="rounded-2xl"
+                onClick={() => updateDocumentTemplate(template.id, { archived: !template.archived })}
+              >
+                {template.archived ? "Unarchive" : "Archive"}
+              </SoftButton>
+              <Button
+                variant="destructive"
+                className="rounded-2xl"
+                onClick={() => {
+                  if (!confirm(`Delete “${template.name}”?`)) return;
+                  deleteDocumentTemplate(template.id);
+                  toast({ title: "Library item deleted." });
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
+
+      {templates.length === 0 ? (
+        <div className="rounded-[32px] border border-dashed border-border/80 bg-white/75 p-10 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <Layers2 className="h-6 w-6" />
+          </div>
+          <div className="text-lg font-semibold">No templates found</div>
+          <div className="mt-2 text-sm text-muted-foreground">Try a new search or create your first document template.</div>
+          <Button onClick={() => openCreate("template")} className="mt-4 rounded-2xl">
+            <Plus className="mr-2 h-4 w-4" /> Create template
+          </Button>
+        </div>
+      ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl rounded-3xl">
+        <DialogContent className="rounded-[32px]">
           <DialogHeader>
-            <DialogTitle className="text-xl">
-              {kind === "full" ? "New full template" : "New section template"}
-            </DialogTitle>
+            <DialogTitle className="text-xl">{kind === "template" ? "Create document template" : "Create reusable fragment"}</DialogTitle>
           </DialogHeader>
-
-          <div className="grid gap-4">
-            <div className="grid gap-2">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label>Name</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-11 rounded-2xl"
-                placeholder={
-                  kind === "full"
-                    ? "Local Visibility Snapshot"
-                    : "Google Business Profile Audit"
-                }
-              />
+              <Input value={name} onChange={(event) => setName(event.target.value)} className="h-11 rounded-2xl" placeholder={kind === "template" ? "Quarterly impact review" : "Executive summary block"} />
             </div>
-            <div className="grid gap-2">
-              <Label>Description (optional)</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-20 rounded-2xl"
-                placeholder="What is this template for?"
-              />
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-28 rounded-2xl" placeholder="What will this be used for?" />
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button className="rounded-2xl" onClick={save}>
-              Create
-            </Button>
+            <Button variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button className="rounded-2xl" onClick={save}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

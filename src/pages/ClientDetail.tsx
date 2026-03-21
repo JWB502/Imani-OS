@@ -13,8 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useData } from "@/contexts/DataContext";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { flattenDocumentPages } from "@/lib/documentTree";
 import { cn } from "@/lib/utils";
-import type { SectionBlock } from "@/types/imani";
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -53,16 +53,15 @@ export default function ClientDetail() {
     }> = [];
 
     for (const r of reports) {
-      for (const s of r.sections) {
-        for (const b of s.blocks) {
-          const block = b as SectionBlock;
-          if (block.type !== "image") continue;
-          if (!block.url) continue;
+      for (const page of flattenDocumentPages(r.pages).map(({ depth, ...rest }) => rest)) {
+        for (const block of page.blocks) {
+          if (block.type !== "media") continue;
+          if (!block.props.url) continue;
           out.push({
             reportId: r.id,
             reportTitle: r.title,
-            label: `${s.title} — ${block.label}`,
-            url: block.url,
+            label: `${page.title} — ${block.label ?? "Media"}`,
+            url: block.props.url,
           });
         }
       }

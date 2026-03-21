@@ -17,7 +17,13 @@ export default function Dashboard() {
     { label: "Active Clients", value: activeClients.length, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Draft Reports", value: draftReports.length, icon: FileText, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Recent Wins", value: data.wins.length, icon: Sparkles, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Total Templates", value: data.fullTemplates.length, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
+    {
+      label: "Total Templates",
+      value: data.documentTemplates.filter((template) => template.kind === "template").length,
+      icon: TrendingUp,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+    },
   ];
 
   return (

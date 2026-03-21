@@ -1,17 +1,20 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-  Client, MonthlyMetric, MetricDefinition, ImaniData, 
-  Campaign, Win, SectionTemplate, FullTemplate, Report,
-  AgencyProduct, AgencyExpense, ReportSection 
-} from '@/types/imani';
-import { createSeedData } from '@/data/seed';
-import { readJson, writeJson } from '@/lib/storage';
-import { createId } from '@/lib/id';
-import { deepCloneJson, ensureRichTextDoc } from "@/lib/richText";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-const DATA_KEY = "imani-os:data:v1";
+import { createSeedData } from "@/data/seed";
+import { DATA_KEY_V1, DATA_KEY_V2, migrateAppData } from "@/lib/documentMigration";
+import { duplicateDocumentPages } from "@/lib/documentTree";
+
+import { createId } from "@/lib/id";
+import { readJson, writeJson } from "@/lib/storage";
+import type {
+  AgencyExpense,
+  AgencyProduct,
+  DocumentReport,
+  DocumentTemplate,
+  ImaniData,
+} from "@/types/imani";
 
 interface DataContextType {
   data: ImaniData;
@@ -31,20 +34,14 @@ interface DataContextType {
   upsertMonthlyMetric: (m: any) => void;
   bulkUpsertMonthlyMetrics: (m: any[]) => void;
   deleteMonthlyMetric: (id: string) => void;
-  createSectionTemplate: (t: any) => any;
-  updateSectionTemplate: (id: string, t: any) => void;
-  duplicateSectionTemplate: (id: string) => any;
-  deleteSectionTemplate: (id: string) => void;
-  createFullTemplate: (t: any) => any;
-  updateFullTemplate: (id: string, t: any) => void;
-  duplicateFullTemplate: (id: string) => any;
-  deleteFullTemplate: (id: string) => void;
-  createReportFromTemplate: (cid: string, tid: string) => Report | undefined;
-  updateReport: (id: string, r: any) => void;
-  duplicateReport: (id: string) => any;
+  createDocumentTemplate: (t: Partial<DocumentTemplate> & Pick<DocumentTemplate, "kind" | "name">) => DocumentTemplate;
+  updateDocumentTemplate: (id: string, patch: Partial<DocumentTemplate>) => void;
+  duplicateDocumentTemplate: (id: string) => DocumentTemplate | undefined;
+  deleteDocumentTemplate: (id: string) => void;
+  createReportFromTemplate: (clientId: string, templateId: string) => DocumentReport | undefined;
+  updateReport: (id: string, patch: Partial<DocumentReport>) => void;
+  duplicateReport: (id: string) => DocumentReport | undefined;
   deleteReport: (id: string) => void;
-  updateReportSection: (rid: string, sid: string, d: any) => void;
-  reorderReportSections: (rid: string, sids: string[]) => void;
   updateAgencyOverview: (d: any) => void;
   updateAgencyAnnualProfitGoal: (g: number) => void;
   upsertAgencyProduct: (p: any) => void;
@@ -56,241 +53,346 @@ interface DataContextType {
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
-function migrateRichTextInSectionBlocks(blocks: any[]) {
-  return (blocks ?? []).map((b) => {
-    if (!b || typeof b !== "object") return b;
-    if (b.type === "richText") return { ...b, content: ensureRichTextDoc(b.content) };
-    return b;
-  });
+function nowIso() {
+  return new Date().toISOString();
 }
 
-function migrateData(saved: ImaniData): ImaniData {
-  return {
-    ...saved,
-    sectionTemplates: (saved.sectionTemplates ?? []).map((st: any) => ({
-      ...st,
-      blocks: migrateRichTextInSectionBlocks(st.blocks),
-    })),
-    reports: (saved.reports ?? []).map((r: any) => ({
-      ...r,
-      sections: (r.sections ?? []).map((s: any) => ({
-        ...s,
-        blocks: migrateRichTextInSectionBlocks(s.blocks),
-      })),
-    })),
-  };
+function loadInitialData(): ImaniData {
+  const latest = readJson<any>(DATA_KEY_V2);
+  if (latest) return migrateAppData(latest);
+
+  const legacy = readJson<any>(DATA_KEY_V1);
+  if (legacy) return migrateAppData(legacy);
+
+  return createSeedData();
 }
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<ImaniData>(() => {
-    const saved = readJson<ImaniData>(DATA_KEY);
-    return saved ? migrateData(saved) : createSeedData();
-  });
+  const [data, setData] = useState<ImaniData>(loadInitialData);
 
   useEffect(() => {
-    writeJson(DATA_KEY, data);
+    writeJson(DATA_KEY_V2, data);
   }, [data]);
 
   const resetToSeed = useCallback(() => {
-    const seed = createSeedData();
-    setData(seed);
+    setData(createSeedData());
   }, []);
 
-  const calculateLtvForClient = (currentState: ImaniData, clientId: string) => {
-    const client = currentState.clients.find(c => c.id === clientId);
+  const calculateLtvForClient = useCallback((currentState: ImaniData, clientId: string) => {
+    const client = currentState.clients.find((item) => item.id === clientId);
     if (!client) return 0;
 
     const billingType = client.billingType || "Retainer";
-
-    if (billingType === "Project") {
-      return client.oneTimeProjectValue || 0;
-    }
+    if (billingType === "Project") return client.oneTimeProjectValue || 0;
 
     const expenseDef = currentState.metricDefinitions.find(
-      d => d.clientId === clientId && d.name === "Service Expenses"
+      (definition) => definition.clientId === clientId && definition.name === "Service Expenses",
     );
-
     if (!expenseDef) return 0;
 
-    const clientMetrics = currentState.monthlyMetrics.filter(m => m.clientId === clientId);
-    return clientMetrics.reduce((sum, m) => {
-      const val = m.values[expenseDef.id];
-      return sum + (typeof val === 'number' ? val : 0);
+    const clientMetrics = currentState.monthlyMetrics.filter((metric) => metric.clientId === clientId);
+    return clientMetrics.reduce((sum, metric) => {
+      const value = metric.values[expenseDef.id];
+      return sum + (typeof value === "number" ? value : 0);
     }, 0);
-  };
+  }, []);
 
-  const createClient = (c: any) => {
-    const nc = {
-      ...c,
+  const createClient = useCallback((client: any) => {
+    const nextClient = {
+      ...client,
       id: createId("cl"),
-      billingType: c.billingType || "Retainer",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      billingType: client.billingType || "Retainer",
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
     };
-    
-    nc.totalLifetimeValue = calculateLtvForClient({ ...data, clients: [nc, ...data.clients] }, nc.id);
-    
-    setData(p => ({ ...p, clients: [nc, ...p.clients] }));
-    return nc;
-  };
 
-  const updateClient = (id: string, c: any) => setData(p => {
-    const nextClients = p.clients.map(x => x.id === id ? { ...x, ...c, updatedAt: new Date().toISOString() } : x);
-    const updatedClients = nextClients.map(client => {
-      if (client.id === id) {
-        return {
-          ...client,
-          totalLifetimeValue: calculateLtvForClient({ ...p, clients: nextClients }, id)
-        };
-      }
-      return client;
+    nextClient.totalLifetimeValue = calculateLtvForClient({ ...data, clients: [nextClient, ...data.clients] }, nextClient.id);
+    setData((prev) => ({ ...prev, clients: [nextClient, ...prev.clients] }));
+    return nextClient;
+  }, [calculateLtvForClient, data]);
+
+  const updateClient = useCallback((id: string, patch: any) => {
+    setData((prev) => {
+      const nextClients = prev.clients.map((client) =>
+        client.id === id ? { ...client, ...patch, updatedAt: nowIso() } : client,
+      );
+
+      return {
+        ...prev,
+        clients: nextClients.map((client) =>
+          client.id === id
+            ? { ...client, totalLifetimeValue: calculateLtvForClient({ ...prev, clients: nextClients }, id) }
+            : client,
+        ),
+      };
     });
+  }, [calculateLtvForClient]);
 
-    return { ...p, clients: updatedClients };
-  });
-
-  const deleteClient = (id: string) => setData(p => ({ ...p, clients: p.clients.filter(x => x.id !== id) }));
-
-  const ensureStandardMetricsForClient = (clientId: string) => {
-    setData(prev => {
-      const client = prev.clients.find(c => c.id === clientId);
+  const ensureStandardMetricsForClient = useCallback((clientId: string) => {
+    setData((prev) => {
+      const client = prev.clients.find((item) => item.id === clientId);
       if (!client) return prev;
 
       const standardMetrics = ["Service Expenses", "Hours Saved", "Revenue Generated"];
-      const existingStandardMetrics = prev.metricDefinitions.filter(
-        d => d.clientId === clientId && standardMetrics.includes(d.name)
+      const existing = prev.metricDefinitions.filter(
+        (definition) => definition.clientId === clientId && standardMetrics.includes(definition.name),
       );
 
-      if (existingStandardMetrics.length === standardMetrics.length) {
-        return prev;
-      }
+      if (existing.length === standardMetrics.length) return prev;
 
-      const newMetrics = standardMetrics
-        .filter(name => !existingStandardMetrics.some(m => m.name === name))
-        .map(name => ({
+      const nextMetrics = standardMetrics
+        .filter((name) => !existing.some((metric) => metric.name === name))
+        .map((name) => ({
           id: createId("md"),
           clientId,
           name,
           kind: (name === "Service Expenses" ? "currency" : "number") as "currency" | "number",
-          isStandard: true
+          isStandard: true,
         }));
 
-      return {
-        ...prev,
-        metricDefinitions: [...prev.metricDefinitions, ...newMetrics]
-      };
+      return { ...prev, metricDefinitions: [...prev.metricDefinitions, ...nextMetrics] };
     });
-  };
+  }, []);
 
-  const bulkUpsertMonthlyMetrics = (metrics: any[]) => {
-    setData(prev => {
+  const bulkUpsertMonthlyMetrics = useCallback((metrics: any[]) => {
+    setData((prev) => {
       const updatedMetrics = [...prev.monthlyMetrics];
-      metrics.forEach(metric => {
-        const index = updatedMetrics.findIndex(m => m.id === metric.id);
-        if (index !== -1) {
-          updatedMetrics[index] = { ...updatedMetrics[index], ...metric, updatedAt: new Date().toISOString() };
+      metrics.forEach((metric) => {
+        const index = updatedMetrics.findIndex((item) => item.id === metric.id);
+        if (index >= 0) {
+          updatedMetrics[index] = { ...updatedMetrics[index], ...metric, updatedAt: nowIso() };
         } else {
-          updatedMetrics.push({ ...metric, id: createId("mm"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+          updatedMetrics.push({ ...metric, id: createId("mm"), createdAt: nowIso(), updatedAt: nowIso() });
         }
       });
 
-      const finalClients = prev.clients.map(client => ({
-        ...client,
-        totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: updatedMetrics }, client.id)
-      }));
-
-      return { ...prev, monthlyMetrics: updatedMetrics, clients: finalClients };
+      return {
+        ...prev,
+        monthlyMetrics: updatedMetrics,
+        clients: prev.clients.map((client) => ({
+          ...client,
+          totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: updatedMetrics }, client.id),
+        })),
+      };
     });
-  };
+  }, [calculateLtvForClient]);
 
-  const value: DataContextType = {
+  const createDocumentTemplate = useCallback((template: Partial<DocumentTemplate> & Pick<DocumentTemplate, "kind" | "name">) => {
+    const nextTemplate: DocumentTemplate = {
+      id: createId("dt"),
+      kind: template.kind,
+      name: template.name,
+      description: template.description,
+      archived: template.archived ?? false,
+      pages: template.pages ?? [],
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      migrationWarnings: template.migrationWarnings ?? [],
+      legacySourceId: template.legacySourceId,
+      legacySourceType: template.legacySourceType,
+    };
+
+    setData((prev) => ({ ...prev, documentTemplates: [nextTemplate, ...prev.documentTemplates] }));
+    return nextTemplate;
+  }, []);
+
+  const updateDocumentTemplate = useCallback((id: string, patch: Partial<DocumentTemplate>) => {
+    setData((prev) => ({
+      ...prev,
+      documentTemplates: prev.documentTemplates.map((template) =>
+        template.id === id ? { ...template, ...patch, updatedAt: nowIso() } : template,
+      ),
+    }));
+  }, []);
+
+  const duplicateDocumentTemplate = useCallback((id: string) => {
+    const template = data.documentTemplates.find((item) => item.id === id);
+    if (!template) return undefined;
+
+    const nextTemplate: DocumentTemplate = {
+      ...template,
+      id: createId("dt"),
+      name: `${template.name} (Copy)`,
+      pages: duplicateDocumentPages(template.pages),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+
+    setData((prev) => ({ ...prev, documentTemplates: [nextTemplate, ...prev.documentTemplates] }));
+    return nextTemplate;
+  }, [data.documentTemplates]);
+
+  const createReportFromTemplate = useCallback((clientId: string, templateId: string) => {
+    const template = data.documentTemplates.find((item) => item.id === templateId && item.kind === "template");
+    if (!template) return undefined;
+
+    const nextReport: DocumentReport = {
+      id: createId("rp"),
+      clientId,
+      title: `${template.name} — ${new Date().toLocaleDateString()}`,
+      reportType: template.name,
+      templateSourceId: template.id,
+      status: "Draft",
+      pages: duplicateDocumentPages(template.pages),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      migrationWarnings: [],
+    };
+
+    setData((prev) => ({ ...prev, reports: [nextReport, ...prev.reports] }));
+    return nextReport;
+  }, [data.documentTemplates]);
+
+  const updateReport = useCallback((id: string, patch: Partial<DocumentReport>) => {
+    setData((prev) => ({
+      ...prev,
+      reports: prev.reports.map((report) =>
+        report.id === id ? { ...report, ...patch, updatedAt: nowIso() } : report,
+      ),
+    }));
+  }, []);
+
+  const duplicateReport = useCallback((id: string) => {
+    const report = data.reports.find((item) => item.id === id);
+    if (!report) return undefined;
+
+    const nextReport: DocumentReport = {
+      ...report,
+      id: createId("rp"),
+      title: `${report.title} (Copy)`,
+      pages: duplicateDocumentPages(report.pages),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+
+    setData((prev) => ({ ...prev, reports: [nextReport, ...prev.reports] }));
+    return nextReport;
+  }, [data.reports]);
+
+  const value = useMemo<DataContextType>(() => ({
     data,
     createClient,
     updateClient,
-    deleteClient,
-    resetToSeed,
-    bulkUpsertMonthlyMetrics,
+    deleteClient: (id: string) => setData((prev) => ({ ...prev, clients: prev.clients.filter((item) => item.id !== id) })),
+    createCampaign: (campaign: any) => setData((prev) => ({
+      ...prev,
+      campaigns: [...prev.campaigns, { ...campaign, id: createId("cmp"), updatedAt: nowIso() }],
+    })),
+    updateCampaign: (id: string, patch: any) => setData((prev) => ({
+      ...prev,
+      campaigns: prev.campaigns.map((campaign) =>
+        campaign.id === id ? { ...campaign, ...patch, updatedAt: nowIso() } : campaign,
+      ),
+    })),
+    deleteCampaign: (id: string) => setData((prev) => ({
+      ...prev,
+      campaigns: prev.campaigns.filter((campaign) => campaign.id !== id),
+    })),
+    createWin: (win: any) => setData((prev) => ({
+      ...prev,
+      wins: [...prev.wins, { ...win, id: createId("win"), createdAt: nowIso(), updatedAt: nowIso() }],
+    })),
+    updateWin: (id: string, patch: any) => setData((prev) => ({
+      ...prev,
+      wins: prev.wins.map((win) => (win.id === id ? { ...win, ...patch, updatedAt: nowIso() } : win)),
+    })),
+    deleteWin: (id: string) => setData((prev) => ({ ...prev, wins: prev.wins.filter((win) => win.id !== id) })),
+    createMetricDefinition: (definition: any) => setData((prev) => ({
+      ...prev,
+      metricDefinitions: [...prev.metricDefinitions, { ...definition, id: createId("md") }],
+    })),
+    updateMetricDefinition: (id: string, patch: any) => setData((prev) => ({
+      ...prev,
+      metricDefinitions: prev.metricDefinitions.map((definition) =>
+        definition.id === id ? { ...definition, ...patch } : definition,
+      ),
+    })),
+    deleteMetricDefinition: (id: string) => setData((prev) => ({
+      ...prev,
+      metricDefinitions: prev.metricDefinitions.filter((definition) => definition.id !== id),
+    })),
     ensureStandardMetricsForClient,
-    createCampaign: (c: any) => setData(p => ({ ...p, campaigns: [...p.campaigns, { ...c, id: createId("cmp"), updatedAt: new Date().toISOString() }] })),
-    updateCampaign: (id: string, c: any) => setData(p => ({ ...p, campaigns: p.campaigns.map(x => x.id === id ? { ...x, ...c, updatedAt: new Date().toISOString() } : x) })),
-    deleteCampaign: (id: string) => setData(p => ({ ...p, campaigns: p.campaigns.filter(x => x.id !== id) })),
-    createWin: (w: any) => setData(p => ({ ...p, wins: [...p.wins, { ...w, id: createId("win"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] })),
-    updateWin: (id: string, w: any) => setData(p => ({ ...p, wins: p.wins.map(x => x.id === id ? { ...x, ...w, updatedAt: new Date().toISOString() } : x) })),
-    deleteWin: (id: string) => setData(p => ({ ...p, wins: p.wins.filter(x => x.id !== id) })),
-    createMetricDefinition: (d: any) => setData(p => ({ ...p, metricDefinitions: [...p.metricDefinitions, { ...d, id: createId("md") }] })),
-    updateMetricDefinition: (id: string, d: any) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.map(x => x.id === id ? { ...x, ...d } : x) })),
-    deleteMetricDefinition: (id: string) => setData(p => ({ ...p, metricDefinitions: p.metricDefinitions.filter(x => x.id !== id) })),
-    upsertMonthlyMetric: (m: any) => bulkUpsertMonthlyMetrics([m]),
-    deleteMonthlyMetric: (id: string) => setData(p => {
-      const metric = p.monthlyMetrics.find(m => m.id === id);
-      const nextMetrics = p.monthlyMetrics.filter(x => x.id !== id);
-      if (metric) {
-        const nextClients = p.clients.map(c => {
-          if (c.id === metric.clientId) {
-            return {
-              ...c,
-              totalLifetimeValue: calculateLtvForClient({ ...p, monthlyMetrics: nextMetrics }, c.id)
-            };
-          }
-          return c;
-        });
-        return { ...p, monthlyMetrics: nextMetrics, clients: nextClients };
-      }
-      return { ...p, monthlyMetrics: nextMetrics };
-    }),
-    createSectionTemplate: (t: any) => { const nt = { ...t, id: createId("st"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, sectionTemplates: [...p.sectionTemplates, nt] })); return nt; },
-    updateSectionTemplate: (id: string, t: any) => setData(p => ({ ...p, sectionTemplates: p.sectionTemplates.map(x => x.id === id ? { ...x, ...t, updatedAt: new Date().toISOString() } : x) })),
-    duplicateSectionTemplate: (id: string) => { const t = data.sectionTemplates.find(x => x.id === id); if (!t) return; return value.createSectionTemplate({ ...t, name: `${t.name} (Copy)` }); },
-    deleteSectionTemplate: (id: string) => setData(p => ({ ...p, sectionTemplates: p.sectionTemplates.filter(x => x.id !== id) })),
-    createFullTemplate: (t: any) => { const nt = { ...t, id: createId("ft"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, fullTemplates: [...p.fullTemplates, nt] })); return nt; },
-    updateFullTemplate: (id: string, t: any) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.map(x => x.id === id ? { ...x, ...t, updatedAt: new Date().toISOString() } : x) })),
-    duplicateFullTemplate: (id: string) => { const t = data.fullTemplates.find(x => x.id === id); if (!t) return; return value.createFullTemplate({ ...t, name: `${t.name} (Copy)` }); },
-    deleteFullTemplate: (id: string) => setData(p => ({ ...p, fullTemplates: p.fullTemplates.filter(x => x.id !== id) })),
-    createReportFromTemplate: (cid: string, tid: string) => {
-      const template = data.fullTemplates.find(t => t.id === tid);
-      if (!template) return undefined;
-      
-      const sections: ReportSection[] = template.sectionTemplateIds.map(sid => {
-        const st = data.sectionTemplates.find(s => s.id === sid);
-        if (!st) return null;
-        return {
-          id: createId("rs"),
-          title: st.name,
-          blocks: st.blocks.map(b => {
-            if (b.type === "richText") {
-              return { ...b, id: createId("blk"), content: deepCloneJson(ensureRichTextDoc((b as any).content)) };
-            }
-            return { ...b, id: createId("blk") };
-          }),
-        };
-      }).filter(Boolean) as ReportSection[];
+    upsertMonthlyMetric: (metric: any) => bulkUpsertMonthlyMetrics([metric]),
+    bulkUpsertMonthlyMetrics,
+    deleteMonthlyMetric: (id: string) => setData((prev) => {
+      const metric = prev.monthlyMetrics.find((item) => item.id === id);
+      const nextMetrics = prev.monthlyMetrics.filter((item) => item.id !== id);
+      if (!metric) return { ...prev, monthlyMetrics: nextMetrics };
 
-      const nr: Report = {
-        id: createId("rp"),
-        clientId: cid,
-        title: `${template.name} - ${new Date().toLocaleDateString()}`,
-        reportType: template.name,
-        status: "Draft",
-        sections,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      return {
+        ...prev,
+        monthlyMetrics: nextMetrics,
+        clients: prev.clients.map((client) =>
+          client.id === metric.clientId
+            ? { ...client, totalLifetimeValue: calculateLtvForClient({ ...prev, monthlyMetrics: nextMetrics }, client.id) }
+            : client,
+        ),
       };
-      
-      setData(prev => ({ ...prev, reports: [nr, ...prev.reports] }));
-      return nr;
-    },
-    updateReport: (id: string, r: any) => setData(p => ({ ...p, reports: p.reports.map(x => x.id === id ? { ...x, ...r, updatedAt: new Date().toISOString() } : x) })),
-    duplicateReport: (id: string) => { const r = data.reports.find(x => x.id === id); if (!r) return; const nr = { ...r, id: createId("rp"), title: `${r.title} (Copy)`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setData(p => ({ ...p, reports: [nr, ...p.reports] })); return nr; },
-    deleteReport: (id: string) => setData(p => ({ ...p, reports: p.reports.filter(x => x.id !== id) })),
-    updateReportSection: (rid: string, sid: string, d: any) => setData(p => ({ ...p, reports: p.reports.map(r => r.id === rid ? { ...r, sections: r.sections.map(s => s.id === sid ? { ...s, ...d } : s) } : r) })),
-    reorderReportSections: (rid: string, sids: string[]) => setData(p => ({ ...p, reports: p.reports.map(r => r.id === rid ? { ...r, sections: sids.map(id => r.sections.find(s => s.id === id)!) } : r) })),
-    updateAgencyOverview: (d: any) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, overview: { ...p.agencyHq!.overview, ...d } } })),
-    updateAgencyAnnualProfitGoal: (g: number) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, annualProfitGoal: g } })),
-    upsertAgencyProduct: (prod: any) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, products: prod.id ? p.agencyHq!.products.map(x => x.id === prod.id ? prod : x) : [...p.agencyHq!.products, { ...prod, id: createId("ap") }] } })),
-    deleteAgencyProduct: (id: string) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, products: p.agencyHq!.products.filter(x => x.id !== id) } })),
-    upsertAgencyExpense: (exp: any) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, expenses: exp.id ? p.agencyHq!.expenses.map(x => x.id === exp.id ? exp : x) : [...p.agencyHq!.expenses, { ...exp, id: createId("ae") }] } })),
-    deleteAgencyExpense: (id: string) => setData(p => ({ ...p, agencyHq: { ...p.agencyHq!, expenses: p.agencyHq!.expenses.filter(x => x.id !== id) } })),
-  };
+    }),
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    duplicateDocumentTemplate,
+    deleteDocumentTemplate: (id: string) => setData((prev) => ({
+      ...prev,
+      documentTemplates: prev.documentTemplates.filter((template) => template.id !== id),
+    })),
+    createReportFromTemplate,
+    updateReport,
+    duplicateReport,
+    deleteReport: (id: string) => setData((prev) => ({
+      ...prev,
+      reports: prev.reports.filter((report) => report.id !== id),
+    })),
+    updateAgencyOverview: (patch: any) => setData((prev) => ({
+      ...prev,
+      agencyHq: { ...prev.agencyHq!, overview: { ...prev.agencyHq!.overview, ...patch } },
+    })),
+    updateAgencyAnnualProfitGoal: (goal: number) => setData((prev) => ({
+      ...prev,
+      agencyHq: { ...prev.agencyHq!, annualProfitGoal: goal },
+    })),
+    upsertAgencyProduct: (product: AgencyProduct) => setData((prev) => ({
+      ...prev,
+      agencyHq: {
+        ...prev.agencyHq!,
+        products: product.id
+          ? prev.agencyHq!.products.map((item) => (item.id === product.id ? product : item))
+          : [...prev.agencyHq!.products, { ...product, id: createId("ap") }],
+      },
+    })),
+    deleteAgencyProduct: (id: string) => setData((prev) => ({
+      ...prev,
+      agencyHq: { ...prev.agencyHq!, products: prev.agencyHq!.products.filter((item) => item.id !== id) },
+    })),
+    upsertAgencyExpense: (expense: AgencyExpense) => setData((prev) => ({
+      ...prev,
+      agencyHq: {
+        ...prev.agencyHq!,
+        expenses: expense.id
+          ? prev.agencyHq!.expenses.map((item) => (item.id === expense.id ? expense : item))
+          : [...prev.agencyHq!.expenses, { ...expense, id: createId("ae") }],
+      },
+    })),
+    deleteAgencyExpense: (id: string) => setData((prev) => ({
+      ...prev,
+      agencyHq: { ...prev.agencyHq!, expenses: prev.agencyHq!.expenses.filter((item) => item.id !== id) },
+    })),
+    resetToSeed,
+  }), [
+    bulkUpsertMonthlyMetrics,
+    calculateLtvForClient,
+    createClient,
+    createDocumentTemplate,
+    createReportFromTemplate,
+    data,
+    duplicateDocumentTemplate,
+    duplicateReport,
+    ensureStandardMetricsForClient,
+    resetToSeed,
+    updateClient,
+    updateDocumentTemplate,
+    updateReport,
+  ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

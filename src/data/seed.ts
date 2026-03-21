@@ -1,11 +1,12 @@
 import { createId } from "@/lib/id";
+import { createRichTextDocFromPlainText } from "@/lib/richText";
+import { migrateAppData } from "@/lib/documentMigration";
 import type {
   AppData,
   FullTemplate,
   SectionBlock,
   SectionTemplate,
 } from "@/types/imani";
-import { createRichTextDocFromPlainText } from "@/lib/richText";
 
 function nowIso() {
   return new Date().toISOString();
@@ -25,7 +26,7 @@ function checklist(label: string, items: string[]): SectionBlock {
     id: createId("blk"),
     type: "checklist",
     label,
-    items: items.map((t) => ({ id: createId("chk"), text: t, checked: false })),
+    items: items.map((text) => ({ id: createId("chk"), text, checked: false })),
   };
 }
 
@@ -34,7 +35,7 @@ function kpi(label: string, items: { name: string; value: string; unit?: string 
     id: createId("blk"),
     type: "kpi",
     label,
-    items: items.map((i) => ({ id: createId("kpi"), ...i })),
+    items: items.map((item) => ({ id: createId("kpi"), ...item })),
   };
 }
 
@@ -105,10 +106,7 @@ export function createSeedData(): AppData {
       description: "Coverage + proximity-based visibility insights.",
       blocks: [
         score("Visibility Health Score", 68),
-        rich(
-          "Findings",
-          "Summarize grid hotspots, weak zones, and recommended focus areas.",
-        ),
+        rich("Findings", "Summarize grid hotspots, weak zones, and recommended focus areas."),
         checklist("Quick checks", [
           "Primary category fit",
           "Service area settings",
@@ -133,10 +131,7 @@ export function createSeedData(): AppData {
           "Photos current",
           "Messaging configured",
         ]),
-        rich(
-          "Notes",
-          "Document issues, opportunities, and recommended changes.",
-        ),
+        rich("Notes", "Document issues, opportunities, and recommended changes."),
       ],
       archived: false,
       createdAt,
@@ -147,10 +142,7 @@ export function createSeedData(): AppData {
       name: "Local Competitors",
       description: "Who outranks us and why — with practical takeaways.",
       blocks: [
-        rich(
-          "Competitor Notes",
-          "List 3–5 competitors, their strengths, and the angle to win.",
-        ),
+        rich("Competitor Notes", "List 3–5 competitors, their strengths, and the angle to win."),
         checklist("Leverage angles", [
           "Category positioning",
           "Review strategy",
@@ -173,10 +165,7 @@ export function createSeedData(): AppData {
           "Improve follow-up speed",
           "Increase review requests",
         ]),
-        rich(
-          "Owner Notes",
-          "Capture context, priority, and who owns each win.",
-        ),
+        rich("Owner Notes", "Capture context, priority, and who owns each win."),
       ],
       archived: false,
       createdAt,
@@ -188,10 +177,7 @@ export function createSeedData(): AppData {
       description: "Process friction, handoffs, and leakage points.",
       blocks: [
         score("Operations Readiness Score", 63),
-        rich(
-          "Findings",
-          "Document intake, response time, follow-up cadence, and bottlenecks.",
-        ),
+        rich("Findings", "Document intake, response time, follow-up cadence, and bottlenecks."),
       ],
       archived: false,
       createdAt,
@@ -208,10 +194,7 @@ export function createSeedData(): AppData {
           "Automations in place",
           "Owner assigned",
         ]),
-        rich(
-          "Notes",
-          "What would make reporting and attribution more reliable?",
-        ),
+        rich("Notes", "What would make reporting and attribution more reliable?"),
       ],
       archived: false,
       createdAt,
@@ -228,10 +211,7 @@ export function createSeedData(): AppData {
           "Missed-call text-back",
           "Appointment reminders",
         ]),
-        rich(
-          "Implementation Notes",
-          "Tools, ownership, and estimated time-to-value.",
-        ),
+        rich("Implementation Notes", "Tools, ownership, and estimated time-to-value."),
       ],
       archived: false,
       createdAt,
@@ -247,10 +227,7 @@ export function createSeedData(): AppData {
           { name: "Revenue", value: "—" },
           { name: "Estimated Value Created", value: "—" },
         ]),
-        rich(
-          "Narrative",
-          "Explain what moved, why it matters, and what we'll do next.",
-        ),
+        rich("Narrative", "Explain what moved, why it matters, and what we'll do next."),
       ],
       archived: false,
       createdAt,
@@ -267,10 +244,7 @@ export function createSeedData(): AppData {
           "Scale high-performing channels",
           "Operationalize follow-up",
         ]),
-        rich(
-          "Notes",
-          "Write recommendations in a practical, strategic tone.",
-        ),
+        rich("Notes", "Write recommendations in a practical, strategic tone."),
       ],
       archived: false,
       createdAt,
@@ -278,7 +252,7 @@ export function createSeedData(): AppData {
     },
   ];
 
-  const stByName = new Map(sectionTemplates.map((s) => [s.name, s.id]));
+  const stByName = new Map(sectionTemplates.map((section) => [section.name, section.id]));
 
   const fullTemplates: FullTemplate[] = [
     {
@@ -362,7 +336,7 @@ export function createSeedData(): AppData {
     },
   ];
 
-  return {
+  return migrateAppData({
     clients: [
       {
         id: createId("cl"),
@@ -385,8 +359,7 @@ export function createSeedData(): AppData {
         totalLifetimeValue: 17500,
         includeInAgencyImpact: true,
         notes: "Internal sample client used to demonstrate Imani OS.",
-        internalContext:
-          "Leadership cares about impact reporting and donor conversion. Follow-up speed is a known bottleneck.",
+        internalContext: "Leadership cares about impact reporting and donor conversion. Follow-up speed is a known bottleneck.",
         createdAt,
         updatedAt: createdAt,
       },
@@ -398,5 +371,5 @@ export function createSeedData(): AppData {
     reports: [],
     metricDefinitions: [],
     monthlyMetrics: [],
-  };
+  });
 }

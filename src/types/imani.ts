@@ -35,7 +35,7 @@ export const INDUSTRIES = [
   "E-commerce",
   "Marketing/Media",
   "Local Service Business",
-  "Other"
+  "Other",
 ] as const;
 
 export interface Client {
@@ -63,12 +63,9 @@ export interface Client {
   oneTimeProjectValue?: number;
   totalLifetimeValue: number;
   includeInAgencyImpact?: boolean;
-
-  // Time-Cost Analysis
   enableTimeCostAnalysis?: boolean;
   avgHoursSavedPerMonth?: number;
   hourlyValue?: number;
-
   notes?: string;
   internalContext?: string;
   privacyId?: string;
@@ -186,12 +183,90 @@ export interface ReportSection {
 }
 
 export type ReportStatus = "Draft" | "Complete";
+export type DocumentTemplateKind = "template" | "fragment";
+export type DocumentStatusTone = "neutral" | "info" | "success" | "warning" | "danger";
+export type DocumentCalloutTone = "info" | "success" | "warning" | "danger";
+export type DocumentBlockType =
+  | "paragraph"
+  | "heading"
+  | "toggle"
+  | "callout"
+  | "checklist"
+  | "status"
+  | "score"
+  | "progress"
+  | "kpiGrid"
+  | "table"
+  | "media"
+  | "divider";
 
-export interface Report {
+interface DocumentBlockBase<T extends DocumentBlockType, P> {
+  id: string;
+  type: T;
+  label?: string;
+  props: P;
+}
+
+export type ParagraphBlock = DocumentBlockBase<"paragraph", { content: any }>;
+export type HeadingBlock = DocumentBlockBase<"heading", { level: 1 | 2 | 3; content: any }>;
+export type ToggleBlock = DocumentBlockBase<"toggle", { title: string; content: any; open?: boolean }>;
+export type CalloutBlock = DocumentBlockBase<"callout", { title: string; tone: DocumentCalloutTone; content: any }>;
+export type ChecklistBlock = DocumentBlockBase<"checklist", { items: ChecklistItem[] }>;
+export type StatusBlock = DocumentBlockBase<"status", { value: string; options: string[]; tone: DocumentStatusTone }>;
+export type ScoreBlock = DocumentBlockBase<"score", { value: number; max: number; note?: string }>;
+export type ProgressBlock = DocumentBlockBase<"progress", { value: number; max: number }>;
+export type KpiGridBlock = DocumentBlockBase<"kpiGrid", { items: KPIItem[] }>;
+export type TableBlock = DocumentBlockBase<"table", { columns: string[]; rows: string[][]; database: boolean }>;
+export type MediaBlock = DocumentBlockBase<"media", { url: string; caption?: string; widthPct?: number; fit?: "contain" | "cover" }>;
+export type DividerBlock = DocumentBlockBase<"divider", Record<string, never>>;
+
+export type DocumentBlock =
+  | ParagraphBlock
+  | HeadingBlock
+  | ToggleBlock
+  | CalloutBlock
+  | ChecklistBlock
+  | StatusBlock
+  | ScoreBlock
+  | ProgressBlock
+  | KpiGridBlock
+  | TableBlock
+  | MediaBlock
+  | DividerBlock;
+
+export interface DocumentPage {
+  id: string;
+  parentId: string | null;
+  title: string;
+  icon?: string;
+  coverUrl?: string;
+  order: number;
+  blocks: DocumentBlock[];
+}
+
+export interface MigrationMeta {
+  legacySourceType?: "sectionTemplate" | "fullTemplate" | "report";
+  legacySourceId?: string;
+  migrationWarnings?: string[];
+}
+
+export interface DocumentTemplate extends MigrationMeta {
+  id: string;
+  kind: DocumentTemplateKind;
+  name: string;
+  description?: string;
+  archived: boolean;
+  pages: DocumentPage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentReport extends MigrationMeta {
   id: string;
   clientId: string;
   title: string;
   reportType: string;
+  templateSourceId?: string;
   reportingPeriod?: string;
   status: ReportStatus;
   analyst?: string;
@@ -199,9 +274,32 @@ export interface Report {
   nextSteps?: string;
   internalNotes?: string;
   pdfPageNumbers?: boolean;
-  sections: ReportSection[];
+  pages: DocumentPage[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type Report = DocumentReport;
+
+export interface LegacyDataBucket {
+  sectionTemplates: SectionTemplate[];
+  fullTemplates: FullTemplate[];
+  reports: Array<{
+    id: string;
+    clientId: string;
+    title: string;
+    reportType: string;
+    reportingPeriod?: string;
+    status: ReportStatus;
+    analyst?: string;
+    executiveSummary?: string;
+    nextSteps?: string;
+    internalNotes?: string;
+    pdfPageNumbers?: boolean;
+    sections: ReportSection[];
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 export interface MetricDefinition {
@@ -271,15 +369,18 @@ export interface AgencyHq {
 }
 
 export interface AppData {
+  schemaVersion: 2;
   clients: Client[];
   wins: Win[];
   campaigns: Campaign[];
-  sectionTemplates: SectionTemplate[];
-  fullTemplates: FullTemplate[];
-  reports: Report[];
+  documentTemplates: DocumentTemplate[];
+  reports: DocumentReport[];
   metricDefinitions: MetricDefinition[];
   monthlyMetrics: MonthlyMetric[];
   agencyHq?: AgencyHq;
+  legacy?: LegacyDataBucket;
+  sectionTemplates?: SectionTemplate[];
+  fullTemplates?: FullTemplate[];
 }
 
 export type ImaniData = AppData;

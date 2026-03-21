@@ -42,6 +42,15 @@
     --input: 185 28% 86%;
     --ring: 182 67% 45%;
 
+    --button-primary: 211 71% 33%;
+    --button-primary-foreground: 180 70% 98%;
+    --button-primary-hover: 211 71% 28%;
+    --button-soft: 180 45% 96%;
+    --button-soft-foreground: 215 72% 16%;
+    --button-soft-hover: 182 38% 90%;
+    --button-outline: 185 28% 86%;
+    --button-outline-foreground: 215 72% 16%;
+
     --radius: 0.95rem;
 
     --sidebar-background: 215 100% 8%; /* #001129 */
@@ -83,7 +92,17 @@
     --input: 215 40% 16%;
     --ring: 182 67% 45%;
 
+    --button-primary: 182 67% 45%;
+    --button-primary-foreground: 215 100% 8%;
+    --button-primary-hover: 182 67% 40%;
+    --button-soft: 215 40% 14%;
+    --button-soft-foreground: 180 70% 96%;
+    --button-soft-hover: 215 40% 18%;
+    --button-outline: 215 40% 16%;
+    --button-outline-foreground: 180 70% 96%;
+
     --sidebar-background: 215 100% 8%;
+
     --sidebar-foreground: 180 70% 96%;
     --sidebar-primary: 182 67% 45%;
     --sidebar-primary-foreground: 180 70% 98%;

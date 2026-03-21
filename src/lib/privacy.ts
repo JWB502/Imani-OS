@@ -1,4 +1,5 @@
-import type { AppData, AppSettings, Client, Report, SectionBlock } from "@/types/imani";
+import { flattenDocumentPages } from "@/lib/documentTree";
+import type { AppData, AppSettings, Client, Report } from "@/types/imani";
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -112,11 +113,11 @@ export function sanitizeForAI(params: {
     knownNames,
   });
 
-  // Ensure image URLs and other non-rich blocks don't leak emails/phones.
-  const imageUrls = params.report.sections
-    .flatMap((s) => s.blocks)
-    .filter((b): b is Extract<SectionBlock, { type: "image" }> => b.type === "image")
-    .map((b) => b.url)
+  // Ensure media URLs and other non-rich blocks don't leak emails/phones.
+  const imageUrls = flattenDocumentPages(params.report.pages)
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === "media")
+    .map((block) => block.props.url)
     .filter(Boolean)
     .join("\n");
 

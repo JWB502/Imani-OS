@@ -1,79 +1,81 @@
 import * as React from "react";
 
 import { RichTextRenderer } from "@/components/editor/RichTextRenderer";
+import { flattenReportPagesForExport, replaceDocumentBlockPlaceholders } from "@/lib/documentExport";
 import { cn } from "@/lib/utils";
-import { ensureRichTextDoc, replaceTextInRichDoc } from "@/lib/richText";
-import type { AppSettings, Client, Report, SectionBlock } from "@/types/imani";
-
-function replaceToken(s: string, token: string, value: string) {
-  return s.split(token).join(value);
-}
-
-function replacePlaceholders(text: string, report: Report, clientName: string) {
-  let out = text;
-  out = replaceToken(out, "{{Client Name}}", clientName);
-  out = replaceToken(out, "{{Report Title}}", report.title);
-  out = replaceToken(out, "{{Report Period}}", report.reportingPeriod ?? "");
-  out = replaceToken(out, "{{Date}}", new Date().toLocaleDateString());
-  out = replaceToken(out, "{{Analyst Name}}", report.analyst ?? "");
-  return out;
-}
+import type { AppSettings, Client, DocumentBlock, Report } from "@/types/imani";
 
 function ProgressBar({ value, max = 100 }: { value: number; max?: number }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
-    <div className="h-2 w-full rounded-full bg-[#e6f0f0] overflow-hidden">
-      <div
-        className="h-2 rounded-full bg-[#26bbc0]"
-        style={{ width: `${pct}%` }}
-      />
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#dbe9f1]">
+      <div className="h-full rounded-full bg-[#2f82ff]" style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-function BlockPrint({
-  block,
-  report,
-  client,
-}: {
-  block: SectionBlock;
-  report: Report;
-  client: Client;
-}) {
-  if (block.type === "richText") {
-    const doc = replaceTextInRichDoc(ensureRichTextDoc(block.content), (t) =>
-      replacePlaceholders(t, report, client.name),
-    );
+function BlockPrint({ block }: { block: DocumentBlock }) {
+  if (block.type === "paragraph" || block.type === "heading") {
+    return <RichTextRenderer doc={block.props.content} className="text-[13px] leading-6" />;
+  }
 
-    return <RichTextRenderer doc={doc} className="text-[13px]" />;
+  if (block.type === "toggle") {
+    return (
+      <div className="rounded-2xl border border-[#dbe9f1] bg-white p-4">
+        <div className="text-sm font-semibold text-[#113049]">{block.props.title}</div>
+        <div className="mt-2">
+          <RichTextRenderer doc={block.props.content} className="text-[13px] leading-6" />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "callout") {
+    const toneClass =
+      block.props.tone === "success"
+        ? "bg-emerald-50 border-emerald-200"
+        : block.props.tone === "warning"
+          ? "bg-amber-50 border-amber-200"
+          : block.props.tone === "danger"
+            ? "bg-rose-50 border-rose-200"
+            : "bg-sky-50 border-sky-200";
+
+    return (
+      <div className={cn("rounded-2xl border p-4", toneClass)}>
+        <div className="text-sm font-semibold text-[#113049]">{block.props.title}</div>
+        <div className="mt-2">
+          <RichTextRenderer doc={block.props.content} className="text-[13px] leading-6" />
+        </div>
+      </div>
+    );
   }
 
   if (block.type === "checklist") {
     return (
-      <div className="space-y-1.5 text-sm leading-6">
-        {block.items.map((i) => (
-          <div key={i.id} className="flex items-start gap-2">
-            <div
-              className={cn(
-                "mt-0.5 h-4 w-4 rounded-[6px] border",
-                i.checked ? "border-[#26bbc0] bg-[#26bbc0]" : "border-[#cfe3e3] bg-white",
-              )}
-            />
-            <div className={cn("flex-1", i.checked && "text-[#031111]/80")}>
-              {i.text || "—"}
-            </div>
+      <div className="space-y-2 text-sm">
+        {block.props.items.map((item) => (
+          <div key={item.id} className="flex items-start gap-2">
+            <div className={cn("mt-1 h-4 w-4 rounded-[6px] border", item.checked ? "border-[#2f82ff] bg-[#2f82ff]" : "border-[#b7cad8] bg-white")} />
+            <span>{item.text || "—"}</span>
           </div>
         ))}
       </div>
     );
   }
 
-  if (block.type === "select") {
+  if (block.type === "status") {
+    return <div className="inline-flex rounded-full bg-[#edf5ff] px-3 py-1 text-sm font-medium text-[#113049]">{block.props.value || "—"}</div>;
+  }
+
+  if (block.type === "score") {
     return (
-      <div className="text-sm">
-        <div className="inline-flex items-center rounded-full bg-[#eefcfc] px-3 py-1 text-[#185391] ring-1 ring-[#cfe3e3]">
-          {block.value || "—"}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm font-medium">
+          <span>{block.props.value} / {block.props.max}</span>
+          <span className="text-[#5b7285]">Score</span>
         </div>
+        <ProgressBar value={block.props.value} max={block.props.max} />
+        {block.props.note ? <div className="text-sm text-[#5b7285]">{block.props.note}</div> : null}
       </div>
     );
   }
@@ -81,45 +83,23 @@ function BlockPrint({
   if (block.type === "progress") {
     return (
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <div className="font-medium">{Math.round(block.value)}%</div>
-          <div className="text-[#031111]/60">Progress</div>
+        <div className="flex items-center justify-between text-sm font-medium">
+          <span>{block.props.value}%</span>
+          <span className="text-[#5b7285]">Progress</span>
         </div>
-        <ProgressBar value={block.value} max={100} />
+        <ProgressBar value={block.props.value} max={block.props.max} />
       </div>
     );
   }
 
-  if (block.type === "score") {
+  if (block.type === "kpiGrid") {
     return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <div className="font-medium">
-            {block.value} / {block.max}
-          </div>
-          <div className="text-[#031111]/60">Score</div>
-        </div>
-        <ProgressBar value={block.value} max={block.max} />
-        {block.note ? (
-          <div className="text-sm text-[#031111]/75">{block.note}</div>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (block.type === "kpi") {
-    return (
-      <div className="grid gap-2">
-        {block.items.map((i) => (
-          <div
-            key={i.id}
-            className="flex items-center justify-between rounded-xl border border-[#e6f0f0] bg-white px-3 py-2"
-          >
-            <div className="text-sm font-medium">{i.name || "—"}</div>
-            <div className="text-sm text-[#031111]/80">
-              {i.value || "—"}
-              {i.unit ? ` ${i.unit}` : ""}
-            </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {block.props.items.map((item) => (
+          <div key={item.id} className="rounded-2xl border border-[#dbe9f1] bg-white px-4 py-3">
+            <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">KPI</div>
+            <div className="mt-2 text-sm font-semibold text-[#113049]">{item.name || "—"}</div>
+            <div className="mt-1 text-lg font-semibold">{item.value || "—"}{item.unit ? ` ${item.unit}` : ""}</div>
           </div>
         ))}
       </div>
@@ -127,76 +107,56 @@ function BlockPrint({
   }
 
   if (block.type === "table") {
-    const cols = (block.columns ?? []).filter(Boolean);
-    const rows = block.rows ?? [];
-
     return (
-      <div className="overflow-hidden rounded-2xl border border-[#e6f0f0]">
+      <div className="overflow-hidden rounded-2xl border border-[#dbe9f1]">
         <table className="w-full border-collapse text-sm">
-          {cols.length ? (
-            <thead className="bg-[#eefcfc]">
-              <tr>
-                {cols.map((c, idx) => (
-                  <th
-                    key={idx}
-                    className="border-b border-[#e6f0f0] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#185391]"
-                  >
-                    {c}
-                  </th>
+          <thead className="bg-[#edf5ff] text-[#113049]">
+            <tr>
+              {block.props.columns.map((column, index) => (
+                <th key={`${column}-${index}`} className="border-b border-[#dbe9f1] px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.24em]">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.props.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex} className="border-b border-[#dbe9f1] px-3 py-2 align-top">
+                    {cell || "—"}
+                  </td>
                 ))}
               </tr>
-            </thead>
-          ) : null}
-          <tbody>
-            {rows.length ? (
-              rows.map((r, ridx) => (
-                <tr key={ridx} className={ridx % 2 ? "bg-white" : "bg-white"}>
-                  {(cols.length ? r.slice(0, cols.length) : r).map((cell, cidx) => (
-                    <td
-                      key={cidx}
-                      className="border-b border-[#e6f0f0] px-3 py-2 align-top"
-                    >
-                      {cell || "—"}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="px-3 py-3 text-[#031111]/60">—</td>
-              </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
     );
   }
 
-  if (block.type === "image") {
-    const pct = Math.max(30, Math.min(100, block.widthPct ?? 100));
-    const fit = block.fit ?? "contain";
-
+  if (block.type === "media") {
     return (
       <div>
-        <div style={{ width: `${pct}%` }}>
-          {/* External images will render if CORS allows; otherwise the URL will still appear. */}
-          <img
-            src={block.url}
-            alt={block.caption || block.label}
-            className={cn(
-              "h-auto w-full rounded-xl border border-[#e6f0f0]",
-              fit === "cover" ? "object-cover" : "object-contain",
-            )}
-          />
-        </div>
-        {block.caption ? (
-          <div className="mt-2 text-xs text-[#031111]/60">{block.caption}</div>
-        ) : null}
+        <img
+          src={block.props.url}
+          alt={block.props.caption || block.label || "Media"}
+          className={cn(
+            "rounded-2xl border border-[#dbe9f1]",
+            block.props.fit === "cover" ? "object-cover" : "object-contain",
+          )}
+          style={{ width: `${Math.max(30, Math.min(100, block.props.widthPct ?? 100))}%` }}
+        />
+        {block.props.caption ? <div className="mt-2 text-xs text-[#5b7285]">{block.props.caption}</div> : null}
       </div>
     );
   }
 
-  return <div className="text-sm text-[#031111]/60">—</div>;
+  if (block.type === "divider") {
+    return <div className="border-t border-dashed border-[#b7cad8]" />;
+  }
+
+  return null;
 }
 
 export function ReportPrintView({
@@ -208,120 +168,82 @@ export function ReportPrintView({
   client: Client;
   settings: AppSettings;
 }) {
+  const flattenedPages = flattenReportPagesForExport(report.pages).map((page) => ({
+    ...page,
+    blocks: page.blocks.map((block) => replaceDocumentBlockPlaceholders(block, report, client)),
+  }));
+
   return (
-    <div className="w-[816px] bg-white text-[#031111]">
-      {/* Cover */}
-      <div className="min-h-[1056px] p-12">
-        <div className="flex items-center justify-between">
+    <div className="w-[816px] bg-white text-[#0c2136]">
+      <div className="min-h-[1056px] break-after-page p-12">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <div className="text-sm font-semibold tracking-tight text-[#185391]">
-              {settings.agencyName}
-            </div>
-            <div className="mt-1 text-3xl font-semibold tracking-tight">
-              {report.title}
-            </div>
-            <div className="mt-2 text-sm text-[#031111]/70">
+            <div className="text-sm font-semibold uppercase tracking-[0.24em] text-[#2f82ff]">{settings.agencyName}</div>
+            <div className="mt-3 text-4xl font-semibold tracking-tight">{report.title}</div>
+            <div className="mt-3 text-sm text-[#5b7285]">
               {client.name}
               {report.reportingPeriod ? ` • ${report.reportingPeriod}` : ""}
+              {report.analyst ? ` • ${report.analyst}` : ""}
             </div>
           </div>
-          <div className="h-12 w-12 rounded-3xl bg-[#26bbc0]" />
+          <div className="rounded-[28px] bg-[#2f82ff] px-5 py-4 text-sm font-semibold text-white">{report.status}</div>
         </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-[#e6f0f0] bg-[#eefcfc] p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-              Prepared for
-            </div>
-            <div className="mt-2 text-lg font-semibold">{client.name}</div>
-            <div className="mt-2 text-sm text-[#031111]/75">
-              {[client.city, client.state].filter(Boolean).join(", ") || "—"}
-            </div>
+        <div className="mt-10 grid grid-cols-2 gap-5">
+          <div className="rounded-[28px] border border-[#dbe9f1] bg-[#edf5ff] p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Prepared for</div>
+            <div className="mt-2 text-xl font-semibold">{client.name}</div>
+            <div className="mt-2 text-sm text-[#5b7285]">{[client.city, client.state].filter(Boolean).join(", ") || "—"}</div>
           </div>
-          <div className="rounded-2xl border border-[#e6f0f0] bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-              Report details
-            </div>
-            <div className="mt-2 text-sm">
-              <div>
-                <span className="font-semibold">Type:</span> {report.reportType}
-              </div>
-              <div className="mt-1">
-                <span className="font-semibold">Status:</span> {report.status}
-              </div>
-              <div className="mt-1">
-                <span className="font-semibold">Analyst:</span> {report.analyst || "—"}
-              </div>
-              <div className="mt-1">
-                <span className="font-semibold">Created:</span> {new Date(report.createdAt).toLocaleDateString()}
-              </div>
+          <div className="rounded-[28px] border border-[#dbe9f1] bg-white p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Document details</div>
+            <div className="mt-2 space-y-1 text-sm">
+              <div><span className="font-semibold">Type:</span> {report.reportType}</div>
+              <div><span className="font-semibold">Created:</span> {new Date(report.createdAt).toLocaleDateString()}</div>
+              <div><span className="font-semibold">Pages:</span> {flattenedPages.length}</div>
             </div>
           </div>
         </div>
 
         {report.executiveSummary ? (
-          <div className="mt-10 rounded-2xl border border-[#e6f0f0] p-6">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-              Executive summary
-            </div>
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-6">
-              {report.executiveSummary}
-            </div>
+          <div className="mt-10 rounded-[28px] border border-[#dbe9f1] bg-white p-6">
+            <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Executive summary</div>
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{report.executiveSummary}</div>
           </div>
         ) : null}
 
-        <div className="mt-10 text-xs text-[#031111]/60">
-          Generated by Imani OS • {settings.agencyName}
-        </div>
+        {report.nextSteps ? (
+          <div className="mt-6 rounded-[28px] border border-[#dbe9f1] bg-white p-6">
+            <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Next steps</div>
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{report.nextSteps}</div>
+          </div>
+        ) : null}
       </div>
 
-      {/* Sections */}
-      {report.sections.map((s) => (
-        <div key={s.id} className="min-h-[1056px] break-after-page p-12">
-          <div className="flex items-end justify-between">
+      {flattenedPages.map((page, pageIndex) => (
+        <div key={page.id} className="min-h-[1056px] break-after-page p-12">
+          <div className="flex items-end justify-between gap-4 border-b border-[#dbe9f1] pb-5">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-                Section
-              </div>
-              <div className="mt-1 text-2xl font-semibold tracking-tight">{s.title}</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Reading order {pageIndex + 1}</div>
+              <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>
             </div>
-            <div className="text-xs text-[#031111]/60">{client.name}</div>
+            <div className="text-sm text-[#5b7285]">Level {page.depth + 1}</div>
           </div>
 
           <div className="mt-6 space-y-4">
-            {s.blocks.map((b) => (
-              <div key={b.id} className="rounded-2xl border border-[#e6f0f0] p-5">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-                  {b.label}
-                </div>
-                <div className="mt-3">
-                  <BlockPrint block={b} report={report} client={client} />
-                </div>
+            {page.blocks.map((block) => (
+              <div key={block.id} className="rounded-[28px] border border-[#dbe9f1] bg-white p-5">
+                {block.label ? <div className="mb-3 text-xs uppercase tracking-[0.24em] text-[#5b7285]">{block.label}</div> : null}
+                <BlockPrint block={block} />
               </div>
             ))}
-
-            {s.internalNotes ? (
-              <div className="rounded-2xl border border-[#e6f0f0] bg-[#eefcfc] p-5">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-                  Internal notes
-                </div>
-                <div className="mt-3 whitespace-pre-wrap text-sm leading-6">
-                  {s.internalNotes}
-                </div>
-              </div>
-            ) : null}
           </div>
 
-          {report.nextSteps ? (
-            <div className="mt-8 rounded-2xl border border-[#e6f0f0] p-6">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[#185391]">
-                Optional next steps
-              </div>
-              <div className="mt-3 whitespace-pre-wrap text-sm leading-6">
-                {report.nextSteps}
-              </div>
-            </div>
-          ) : null}
+          <div className="mt-8 flex items-center justify-between text-xs text-[#5b7285]">
+            <span>{settings.agencyName}</span>
+            <span>{client.name}</span>
+            <span>Page {pageIndex + 1}</span>
+          </div>
         </div>
       ))}
     </div>
