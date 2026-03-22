@@ -2,18 +2,18 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { createId } from "@/lib/id";
+import { readJson, writeJson } from "@/lib/storage";
 import { createSeedData } from "@/data/seed";
 import { DATA_KEY_V1, DATA_KEY_V2, migrateAppData } from "@/lib/documentMigration";
 import { duplicateDocumentPages } from "@/lib/documentTree";
-
-import { createId } from "@/lib/id";
-import { readJson, writeJson } from "@/lib/storage";
 import type {
   AgencyExpense,
   AgencyProduct,
   DocumentReport,
   DocumentTemplate,
   ImaniData,
+  KeyPerson,
 } from "@/types/imani";
 
 interface DataContextType {
@@ -48,6 +48,8 @@ interface DataContextType {
   deleteAgencyProduct: (id: string) => void;
   upsertAgencyExpense: (e: any) => void;
   deleteAgencyExpense: (id: string) => void;
+  upsertKeyPerson: (p: KeyPerson) => void;
+  deleteKeyPerson: (id: string) => void;
   resetToSeed: () => void;
 }
 
@@ -376,6 +378,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deleteAgencyExpense: (id: string) => setData((prev) => ({
       ...prev,
       agencyHq: { ...prev.agencyHq!, expenses: prev.agencyHq!.expenses.filter((item) => item.id !== id) },
+    })),
+    upsertKeyPerson: (person: KeyPerson) => setData((prev) => ({
+      ...prev,
+      agencyHq: {
+        ...prev.agencyHq!,
+        keyPersonnel: person.id
+          ? (prev.agencyHq!.keyPersonnel || []).map(p => p.id === person.id ? person : p)
+          : [...(prev.agencyHq!.keyPersonnel || []), { ...person, id: createId("kp") }]
+      }
+    })),
+    deleteKeyPerson: (id: string) => setData((prev) => ({
+      ...prev,
+      agencyHq: {
+        ...prev.agencyHq!,
+        keyPersonnel: (prev.agencyHq!.keyPersonnel || []).filter(p => p.id !== id)
+      }
     })),
     resetToSeed,
   }), [

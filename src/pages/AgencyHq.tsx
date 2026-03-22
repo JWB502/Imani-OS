@@ -18,9 +18,15 @@ import {
   Minus,
   Sparkles,
   BarChart3,
+  GraduationCap,
+  Award,
+  FileText,
+  Upload,
 } from "lucide-react";
 
 import { useData } from "@/contexts/DataContext";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,18 +59,25 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import type { AgencyProduct, ProductType, PricingModel, AgencyExpense, BillingCycle, ExpenseCategory } from "@/types/imani";
+import { cn, fileToBase64 } from "@/lib/utils";
+import { runOpenAiChat } from "@/lib/ai";
+import type { AgencyProduct, ProductType, PricingModel, AgencyExpense, BillingCycle, ExpenseCategory, KeyPerson } from "@/types/imani";
 
 export default function AgencyHq() {
+  const { toast } = useToast();
+  const { settings } = useSettings();
   const {
     data,
     updateAgencyOverview,
     upsertAgencyProduct,
     deleteAgencyProduct,
     upsertAgencyExpense,
-    deleteAgencyExpense
+    deleteAgencyExpense,
+    upsertKeyPerson,
+    deleteKeyPerson,
+    updateAgencyAnnualProfitGoal
   } = useData();
+  
   const hq = data.agencyHq;
 
   // Overview Form State
@@ -148,56 +161,134 @@ export default function AgencyHq() {
   const progressToGoal = profitGoal > 0 ? (projectedProfit / profitGoal) * 100 : 0;
 
   const handleGenerateAi = async () => {
+    if (!settings.openAiApiKey && !settings.openRouterApiKey) {
+      toast({ 
+        title: "API Key Missing", 
+        description: "Please configure your OpenAI or OpenRouter API key in Settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGeneratingAi(true);
-    // Mocking AI response for now - in a real app this would call an edge function or API
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setAiInsights("Based on your projections, you are on track to reach " + Math.round(progressToGoal) + "% of your profit goal. To reach 100%, consider increasing the price of your core services by 15% or acquiring 3 more 'High Value' clients. Your current expense-to-revenue ratio is healthy at " + Math.round((annualExpensesTotal / projectedRevenue) * 100) + "%.");
-    setIsGeneratingAi(false);
+    try {
+      // Compile holistic data for strategic analysis
+      const contextData = {
+        agency: {
+          name: hq?.overview.name,
+          description: hq?.overview.description,
+          goals: { targetProfit: profitGoal, projectedProfit },
+          mrr: mrr,
+          arr: arr,
+          teamSize: hq?.overview.employeeCount
+        },
+        offerings: hq?.products.map(p => ({
+          name: p.name,
+          price: p.price,
+          model: p.pricingModel,
+          active: p.activeClients,
+          projected: p.projectedSales
+        })),
+        expenses: hq?.expenses.map(e => ({
+          name: e.name,
+          cost: e.cost,
+          cycle: e.billingCycle,
+          category: e.category
+        })),
+        wins: data.wins.slice(0, 10).map(w => ({
+          title: w.title,
+          category: w.category,
+          result: w.measurableResult
+        })),
+        activeCampaigns: data.campaigns.slice(0, 5).map(c => ({
+          channel: c.channel,
+          spend: c.adSpend,
+          income: c.income
+        }))
+      };
+
+      const systemPrompt = "You are a world-class Strategic Agency Advisor. You provide actionable, data-driven insights to agency owners based on their revenue, operations, personnel, and recent successes.";
+      const userPrompt = `
+        Analyze my agency footprint and provide 3-4 specific strategic insights.
+        
+        Current Status:
+        - Annual Profit Goal: ${formatCurrency(profitGoal)}
+        - Projected Annual Profit: ${formatCurrency(projectedProfit)}
+        - Monthly Recurring Revenue (MRR): ${formatCurrency(mrr)}
+        - Total Monthly Expenses: ${formatCurrency(monthlyExpensesTotal)}
+        
+        Agency Data Context:
+        ${JSON.stringify(contextData, null, 2)}
+        
+        Provide your response as a professional advisor. Focus on:
+        1. Leverage: Which of my products/services are the most scalable?
+        2. Efficiency: Where can I optimize costs based on my expense categories?
+        3. Momentum: How can I use my recent "Wins" to increase my prices or acquire better clients?
+        4. Growth: A specific recommendation to hit my 100% profit goal.
+      `;
+
+      const result = await runOpenAiChat({
+        apiKey: (settings.aiProvider === "openai" ? settings.openAiApiKey : settings.openRouterApiKey) || "",
+        model: settings.openAiModel,
+        provider: settings.aiProvider,
+        system: systemPrompt,
+        user: userPrompt
+      });
+
+      setAiInsights(result);
+    } catch (error: any) {
+      toast({ 
+        title: "Analysis Failed", 
+        description: error.message || "An unexpected error occurred during analysis.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   const [goalDraft, setGoalDraft] = React.useState(String(hq?.annualProfitGoal || ""));
-  const { updateAgencyAnnualProfitGoal } = useData();
 
   const handleSetGoal = () => {
     const val = parseFloat(goalDraft) || 0;
     updateAgencyAnnualProfitGoal(val);
+    toast({ title: "Profit goal updated." });
   };
 
   return (
-
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[color:var(--im-navy)]">Agency HQ</h1>
-          <p className="text-muted-foreground">Manage your agency profile, offerings, expenses, and growth projections.</p>
+          <p className="text-muted-foreground">Manage your agency profile, personnel, offerings, and strategic growth.</p>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-white/50 p-1 rounded-2xl shadow-sm border border-border/50">
-          <TabsTrigger value="overview" className="rounded-xl px-4 py-2 gap-2">
+        <TabsList className="bg-white/50 p-1 rounded-2xl shadow-sm border border-border/50 overflow-x-auto flex w-full md:w-auto">
+          <TabsTrigger value="overview" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
             <Building2 className="h-4 w-4" />
             Agency Overview
           </TabsTrigger>
-          <TabsTrigger value="products" className="rounded-xl px-4 py-2 gap-2">
+          <TabsTrigger value="products" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
             <Package className="h-4 w-4" />
             Products/Services
           </TabsTrigger>
-          <TabsTrigger value="expenses" className="rounded-xl px-4 py-2 gap-2">
+          <TabsTrigger value="expenses" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
             <DollarSign className="h-4 w-4" />
             Recurring Expenses
           </TabsTrigger>
-          <TabsTrigger value="revenue" className="rounded-xl px-4 py-2 gap-2">
+          <TabsTrigger value="revenue" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
             <Calculator className="h-4 w-4" />
             Recurring Revenue
           </TabsTrigger>
-          <TabsTrigger value="goal" className="rounded-xl px-4 py-2 gap-2">
+          <TabsTrigger value="goal" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
             <Target className="h-4 w-4" />
             Goal & Projection
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-8">
           {isOverviewEmpty && !isOverviewEditing ? (
             <Card className="rounded-3xl border-dashed border-2 bg-white/40 flex flex-col items-center justify-center p-12 text-center">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -365,7 +456,7 @@ export default function AgencyHq() {
                           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Website</div>
                           <div className="flex items-center gap-2">
                             <Globe className="h-4 w-4 text-primary" />
-                            <a href={hq?.overview.websiteUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                            <a href={hq?.overview.websiteUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1 truncate max-w-[140px]">
                               {hq?.overview.websiteUrl.replace(/^https?:\/\//, '')}
                               <ExternalLink className="h-3 w-3" />
                             </a>
@@ -422,14 +513,107 @@ export default function AgencyHq() {
                     </div>
                     <div className="flex justify-between items-center text-sm border-t pt-4">
                       <span className="text-muted-foreground">App Version</span>
-                      <Badge variant="outline" className="rounded-lg">v1.1.0</Badge>
+                      <Badge variant="outline" className="rounded-lg">v1.3.1</Badge>
                     </div>
-
                   </CardContent>
                 </Card>
               </div>
             </div>
           )}
+
+          {/* Key Personnel Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-[color:var(--im-navy)]">Key Personnel</h3>
+                <p className="text-sm text-muted-foreground">Manage details for founders and executive team members.</p>
+              </div>
+              <PersonnelDialog onSave={upsertKeyPerson} />
+            </div>
+
+            {!hq?.keyPersonnel?.length ? (
+              <Card className="rounded-3xl border-dashed border-2 bg-white/40 flex flex-col items-center justify-center p-12 text-center">
+                <UsersIcon className="h-10 w-10 text-muted-foreground mb-4" />
+                <CardTitle className="text-base mb-1">No personnel listed</CardTitle>
+                <CardDescription className="mb-6">Add your leadership team to complete your agency profile.</CardDescription>
+                <PersonnelDialog onSave={upsertKeyPerson} trigger={
+                  <Button variant="outline" className="rounded-xl">Add Leadership Member</Button>
+                } />
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {hq.keyPersonnel.map(person => (
+                  <Card key={person.id} className="rounded-3xl shadow-sm border-border/50 bg-white/70 hover:shadow-md transition-shadow group overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <Badge variant="secondary" className="rounded-lg mb-2">
+                          {person.role}
+                        </Badge>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <PersonnelDialog 
+                            person={person} 
+                            onSave={upsertKeyPerson} 
+                            trigger={
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary">
+                                <Settings2 className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-600"
+                            onClick={() => {
+                              if(confirm(`Remove ${person.name} from personnel?`)) {
+                                deleteKeyPerson(person.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardTitle className="text-lg">{person.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground line-clamp-2 italic">"{person.bio}"</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-2 pt-2 border-t border-border/40">
+                        {person.education && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <GraduationCap className="h-3.5 w-3.5 text-primary" />
+                            <span className="truncate">{person.education}</span>
+                          </div>
+                        )}
+                        {person.certifications && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Award className="h-3.5 w-3.5 text-primary" />
+                            <span className="truncate">{person.certifications}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {person.resumeData && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full rounded-xl gap-2 h-9 bg-white/50 hover:bg-white"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = person.resumeData!;
+                            link.download = person.resumeFileName || `${person.name.replace(/\s+/g, '_')}_Resume.pdf`;
+                            link.click();
+                          }}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Download Resume
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="products" className="space-y-6">
@@ -686,18 +870,22 @@ export default function AgencyHq() {
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">AI Strategic Analysis</CardTitle>
-                  <CardDescription>Comprehensive insights based on your agency and client data</CardDescription>
+                  <CardTitle className="text-base">AI Strategic Advisor</CardTitle>
+                  <CardDescription>Comprehensive insights based on holistic agency footprint, ROI impact, and wins.</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-4 flex flex-col items-center justify-center text-center py-8">
+            <CardContent className="pt-4 flex flex-col items-center justify-center text-center py-8 px-6">
               {aiInsights ? (
-                <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <p className="text-foreground leading-relaxed italic">"{aiInsights}"</p>
-                  <Button variant="ghost" size="sm" className="mt-4 text-primary" onClick={() => setAiInsights(null)}>
-                    Clear Insights
-                  </Button>
+                <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500 text-left">
+                  <div className="bg-white/80 rounded-2xl p-6 border border-primary/10 shadow-inner whitespace-pre-wrap leading-relaxed text-sm">
+                    {aiInsights}
+                  </div>
+                  <div className="flex justify-center mt-6">
+                    <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5 rounded-xl" onClick={() => setAiInsights(null)}>
+                      Clear Advisor Insights
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -705,9 +893,9 @@ export default function AgencyHq() {
                     <Sparkles className="h-8 w-8 text-primary/40" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-[color:var(--im-navy)]">Generate Strategic Insights</h4>
+                    <h4 className="font-semibold text-[color:var(--im-navy)]">Consult your Strategic Advisor</h4>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
-                      Get AI-powered recommendations for growth, retention, messaging, and customer acquisition based on your comprehensive agency data.
+                      The AI will analyze your <span className="font-bold text-primary">Key Wins</span>, <span className="font-bold text-primary">ROI data</span>, and <span className="font-bold text-primary">Offerings</span> to provide actionable growth and efficiency advice.
                     </p>
                   </div>
                   <Button
@@ -715,7 +903,7 @@ export default function AgencyHq() {
                     onClick={handleGenerateAi}
                     className="rounded-xl px-8 shadow-md gap-2"
                   >
-                    {isGeneratingAi ? "Analyzing..." : "Generate Analysis"}
+                    {isGeneratingAi ? "Analyzing Portfolio..." : "Generate Analysis"}
                     {!isGeneratingAi && <Sparkles className="h-4 w-4" />}
                   </Button>
                   {!hq?.annualProfitGoal && (
@@ -883,9 +1071,159 @@ export default function AgencyHq() {
             </Card>
           </div>
         </TabsContent>
-
       </Tabs>
     </div>
+  );
+}
+
+function PersonnelDialog({ person, onSave, trigger }: { person?: KeyPerson, onSave: (p: any) => void, trigger?: React.ReactNode }) {
+  const [open, setOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState<Omit<KeyPerson, 'id'>>({
+    name: person?.name || "",
+    role: person?.role || "",
+    bio: person?.bio || "",
+    education: person?.education || "",
+    certifications: person?.certifications || "",
+    resumeData: person?.resumeData || undefined,
+    resumeFileName: person?.resumeFileName || undefined,
+  });
+
+  React.useEffect(() => {
+    if (open && person) {
+      setDraft({
+        name: person.name,
+        role: person.role,
+        bio: person.bio,
+        education: person.education,
+        certifications: person.certifications,
+        resumeData: person.resumeData,
+        resumeFileName: person.resumeFileName,
+      });
+    }
+  }, [open, person]);
+
+  const handleSave = () => {
+    onSave({
+      ...draft,
+      id: person?.id,
+    });
+    setOpen(false);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const base64 = await fileToBase64(file);
+      setDraft({ ...draft, resumeData: base64, resumeFileName: file.name });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || <Button className="rounded-xl gap-2 shadow-md"><Plus className="h-4 w-4" /> Add Member</Button>}
+      </DialogTrigger>
+      <DialogContent className="rounded-3xl max-w-lg border-border/50 bg-white/95 backdrop-blur shadow-xl">
+        <DialogHeader>
+          <DialogTitle>{person ? "Edit Personnel" : "New Leadership Member"}</DialogTitle>
+          <DialogDescription>
+            Add a founder, executive, or key team member to the agency profile.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="per-name">Full Name</Label>
+              <Input
+                id="per-name"
+                value={draft.name}
+                onChange={e => setDraft({...draft, name: e.target.value})}
+                placeholder="e.g. John Doe"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="per-role">Role/Title</Label>
+              <Input
+                id="per-role"
+                value={draft.role}
+                onChange={e => setDraft({...draft, role: e.target.value})}
+                placeholder="e.g. Founder & CEO"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="per-bio">Brief Bio</Label>
+            <Textarea
+              id="per-bio"
+              value={draft.bio}
+              onChange={e => setDraft({...draft, bio: e.target.value})}
+              placeholder="A short professional overview..."
+              className="rounded-xl min-h-[80px]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="per-edu">Education</Label>
+              <Input
+                id="per-edu"
+                value={draft.education}
+                onChange={e => setDraft({...draft, education: e.target.value})}
+                placeholder="e.g. MBA, Stanford"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="per-cert">Certifications</Label>
+              <Input
+                id="per-cert"
+                value={draft.certifications}
+                onChange={e => setDraft({...draft, certifications: e.target.value})}
+                placeholder="e.g. Google Ads Expert"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Label>Resume / CV (PDF or Image)</Label>
+            <div className="flex items-center gap-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="rounded-xl gap-2 w-full border-dashed"
+                onClick={() => document.getElementById('per-resume')?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                {draft.resumeFileName ? "Replace Resume" : "Upload Resume"}
+              </Button>
+              <input 
+                id="per-resume" 
+                type="file" 
+                className="hidden" 
+                accept=".pdf,image/*"
+                onChange={handleFileChange}
+              />
+            </div>
+            {draft.resumeFileName && (
+              <p className="text-[10px] text-primary font-medium flex items-center gap-1 pl-1">
+                <FileText className="h-3 w-3" />
+                {draft.resumeFileName}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" className="rounded-xl" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button className="rounded-xl" onClick={handleSave} disabled={!draft.name || !draft.role}>Save Member</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1017,7 +1355,6 @@ function ExpenseDialog({ expense, onSave, trigger }: { expense?: AgencyExpense, 
 }
 
 function ProductDialog({ product, onSave, trigger }: { product?: AgencyProduct, onSave: (p: any) => void, trigger?: React.ReactNode }) {
-
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<Omit<AgencyProduct, 'id' | 'activeClients' | 'projectedSales'>>({
     name: product?.name || "",

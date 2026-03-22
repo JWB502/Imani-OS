@@ -367,6 +367,17 @@ export interface AgencyExpense {
   cost: number;
 }
 
+export interface KeyPerson {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  education?: string;
+  certifications?: string;
+  resumeData?: string; // base64
+  resumeFileName?: string;
+}
+
 export interface AgencyHq {
   overview: {
     name: string;
@@ -380,6 +391,7 @@ export interface AgencyHq {
   annualProfitGoal: number;
   products: AgencyProduct[];
   expenses: AgencyExpense[];
+  keyPersonnel: KeyPerson[];
 }
 
 export interface AppData {
