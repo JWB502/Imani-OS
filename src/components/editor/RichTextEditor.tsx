@@ -58,8 +58,8 @@ function ToolButton({
       variant="secondary"
       size="icon"
       className={cn(
-        "h-9 w-9 rounded-2xl bg-white shadow-sm ring-1 ring-border/60 hover:bg-slate-50",
-        active && "bg-primary/10 text-primary ring-primary/20 hover:bg-primary/15",
+        "h-9 w-9 rounded-2xl bg-slate-50 shadow-sm ring-1 ring-border hover:bg-slate-100",
+        active && "bg-primary/10 text-primary ring-primary/40 hover:bg-primary/15",
       )}
       disabled={disabled}
       onClick={onClick}
@@ -134,11 +134,12 @@ export function RichTextEditor({
             <Button
               type="button"
               variant="secondary"
-              className="h-9 rounded-2xl bg-white shadow-sm ring-1 ring-border/60 hover:bg-slate-50"
+              className="h-9 rounded-2xl bg-slate-50 shadow-sm ring-1 ring-border hover:bg-slate-100"
             >
               Headings
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="start" className="rounded-2xl">
             <DropdownMenuItem
               onClick={() => editor?.chain().focus().setParagraph().run()}
@@ -211,7 +212,7 @@ export function RichTextEditor({
             <Button
               type="button"
               variant="secondary"
-              className="h-9 rounded-2xl bg-white shadow-sm ring-1 ring-border/60 hover:bg-slate-50"
+              className="h-9 rounded-2xl bg-slate-50 shadow-sm ring-1 ring-border hover:bg-slate-100"
             >
               Text color
             </Button>
@@ -228,7 +229,7 @@ export function RichTextEditor({
                 }}
               >
                 <span
-                  className="mr-2 inline-block h-3 w-3 rounded-full ring-1 ring-border/60"
+                  className="mr-2 inline-block h-3 w-3 rounded-full ring-1 ring-border"
                   style={{ backgroundColor: c.value ?? "transparent" }}
                 />
                 {c.name}
@@ -240,12 +241,13 @@ export function RichTextEditor({
         <Button
           type="button"
           variant="secondary"
-          className="h-9 rounded-2xl bg-white shadow-sm ring-1 ring-border/60 hover:bg-slate-50"
+          className="h-9 rounded-2xl bg-slate-50 shadow-sm ring-1 ring-border hover:bg-slate-100"
           onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
           disabled={!editor}
         >
           <RemoveFormatting className="mr-2 h-4 w-4" /> Clear
         </Button>
+
       </div>
 
       <div className="relative">

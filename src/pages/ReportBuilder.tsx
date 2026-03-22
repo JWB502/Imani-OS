@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, Copy, Download, Eye, Trash2 } from "lucide-rea
 import { SoftButton } from "@/components/app/SoftButton";
 import { DocumentStatusBadge, DocumentToolbar } from "@/components/documents/DocumentToolbar";
 import { DocumentWorkspace } from "@/components/documents/DocumentWorkspace";
+import { PdfPreviewMock } from "@/components/reports/PdfPreviewMock";
 import { ReportPrintView } from "@/components/reports/ReportPrintView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,12 +24,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { exportElementToPdf } from "@/lib/pdf";
+import type { PdfExportOptions } from "@/types/imani";
+
+const DEFAULT_PDF_OPTIONS: PdfExportOptions = {
+  showHeader: true,
+  showFooter: true,
+  showPageNumbers: true,
+  showDate: true,
+  showAgencyName: true,
+  showClientName: true,
+  showReportTitle: true,
+};
 
 export default function ReportBuilder() {
   const { id } = useParams();
@@ -60,11 +73,14 @@ export default function ReportBuilder() {
     const element = host?.querySelector("[data-print-root='true']") as HTMLElement | null;
     if (!element) return;
 
+    const options = report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS;
+
     toast({ title: "Generating PDF…" });
     await exportElementToPdf({
       element,
       fileName: `${client.name} — ${report.title}.pdf`,
-      pageNumbers: report.pdfPageNumbers ?? settings.pdfPageNumbers,
+      // We disable the jspdf-native page numbering if our DOM-based footer is enabled
+      pageNumbers: options.showFooter ? false : (report.pdfPageNumbers ?? settings.pdfPageNumbers),
     });
   }
 
@@ -168,20 +184,117 @@ export default function ReportBuilder() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="rounded-[28px] border border-border/70 bg-muted/20 p-4 xl:col-span-2">
-                  <div className="flex items-center justify-between gap-4">
+
+                <div className="rounded-[28px] border border-border/70 bg-white/40 p-5 xl:col-span-2">
+                  <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-semibold">PDF page numbers</div>
-                      <div className="text-sm text-muted-foreground">Keep header/footer metadata and page numbering in export output.</div>
+                      <div className="text-lg font-bold">Export Configuration</div>
+                      <div className="text-sm text-muted-foreground">Manage header, footer, and metadata placement.</div>
                     </div>
-                    <Switch
-                      checked={report.pdfPageNumbers ?? settings.pdfPageNumbers}
-                      onCheckedChange={(checked) => updateReport(report.id, { pdfPageNumbers: checked })}
-                    />
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm">Page Header</Label>
+                          <div className="text-xs text-muted-foreground">Include a top metadata bar.</div>
+                        </div>
+                        <Switch
+                          checked={report.pdfExportOptions?.showHeader ?? DEFAULT_PDF_OPTIONS.showHeader}
+                          onCheckedChange={(val) => updateReport(report.id, {
+                            pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showHeader: val }
+                          })}
+                        />
+                      </div>
+
+                      {(report.pdfExportOptions?.showHeader ?? DEFAULT_PDF_OPTIONS.showHeader) && (
+                        <div className="ml-6 grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={report.pdfExportOptions?.showAgencyName ?? DEFAULT_PDF_OPTIONS.showAgencyName}
+                              onCheckedChange={(val) => updateReport(report.id, {
+                                pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showAgencyName: val }
+                              })}
+                            />
+                            <Label className="text-xs">Agency name</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={report.pdfExportOptions?.showClientName ?? DEFAULT_PDF_OPTIONS.showClientName}
+                              onCheckedChange={(val) => updateReport(report.id, {
+                                pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showClientName: val }
+                              })}
+                            />
+                            <Label className="text-xs">Client name</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={report.pdfExportOptions?.showReportTitle ?? DEFAULT_PDF_OPTIONS.showReportTitle}
+                              onCheckedChange={(val) => updateReport(report.id, {
+                                pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showReportTitle: val }
+                              })}
+                            />
+                            <Label className="text-xs">Report title</Label>
+                          </div>
+                        </div>
+                      )}
+
+                      <Separator className="my-2" />
+
+                      <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm">Page Footer</Label>
+                          <div className="text-xs text-muted-foreground">Include a bottom metadata bar.</div>
+                        </div>
+                        <Switch
+                          checked={report.pdfExportOptions?.showFooter ?? DEFAULT_PDF_OPTIONS.showFooter}
+                          onCheckedChange={(val) => updateReport(report.id, {
+                            pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showFooter: val }
+                          })}
+                        />
+                      </div>
+
+                      {(report.pdfExportOptions?.showFooter ?? DEFAULT_PDF_OPTIONS.showFooter) && (
+                        <div className="ml-6 grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={report.pdfExportOptions?.showPageNumbers ?? DEFAULT_PDF_OPTIONS.showPageNumbers}
+                              onCheckedChange={(val) => updateReport(report.id, {
+                                pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showPageNumbers: val }
+                              })}
+                            />
+                            <Label className="text-xs">Page numbering</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={report.pdfExportOptions?.showDate ?? DEFAULT_PDF_OPTIONS.showDate}
+                              onCheckedChange={(val) => updateReport(report.id, {
+                                pdfExportOptions: { ...(report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS), showDate: val }
+                              })}
+                            />
+                            <Label className="text-xs">Date</Label>
+                          </div>
+                        </div>
+
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                      <Label className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">Mock Preview</Label>
+                      <PdfPreviewMock
+                        options={report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS}
+                        agencyName={settings.agencyName}
+                        clientName={client.name}
+                        reportTitle={report.title}
+                      />
+                    </div>
                   </div>
                 </div>
+
                 <div className="space-y-2 xl:col-span-2">
                   <Label>Executive summary</Label>
+
                   <Textarea value={report.executiveSummary ?? ""} onChange={(event) => updateReport(report.id, { executiveSummary: event.target.value })} className="min-h-28 rounded-2xl bg-white" placeholder="Decision-ready summary" />
                 </div>
                 <div className="space-y-2 xl:col-span-2">

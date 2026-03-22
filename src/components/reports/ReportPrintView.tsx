@@ -1,11 +1,23 @@
 import * as React from "react";
 
+import { PdfPageViewer } from "@/components/documents/PdfPageViewer";
 import { RichTextRenderer } from "@/components/editor/RichTextRenderer";
 import { flattenReportPagesForExport, replaceDocumentBlockPlaceholders } from "@/lib/documentExport";
 import { cn } from "@/lib/utils";
-import type { AppSettings, Client, DocumentBlock, Report } from "@/types/imani";
+import type { AppSettings, Client, DocumentBlock, PdfExportOptions, Report } from "@/types/imani";
+
+const DEFAULT_PDF_OPTIONS: PdfExportOptions = {
+  showHeader: true,
+  showFooter: true,
+  showPageNumbers: true,
+  showDate: true,
+  showAgencyName: true,
+  showClientName: true,
+  showReportTitle: true,
+};
 
 function ProgressBar({ value, max = 100 }: { value: number; max?: number }) {
+
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#dbe9f1]">
@@ -168,6 +180,8 @@ export function ReportPrintView({
   client: Client;
   settings: AppSettings;
 }) {
+  const options = report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS;
+
   const flattenedPages = flattenReportPagesForExport(report.pages).map((page) => ({
     ...page,
     blocks: page.blocks.map((block) => replaceDocumentBlockPlaceholders(block, report, client)),
@@ -222,28 +236,40 @@ export function ReportPrintView({
 
       {flattenedPages.map((page, pageIndex) => (
         <div key={page.id} className="min-h-[1056px] break-after-page p-12">
-          <div className="flex items-end justify-between gap-4 border-b border-[#dbe9f1] pb-5">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Reading order {pageIndex + 1}</div>
-              <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>
-            </div>
-            <div className="text-sm text-[#5b7285]">Level {page.depth + 1}</div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            {page.blocks.map((block) => (
-              <div key={block.id} className="rounded-[28px] border border-[#dbe9f1] bg-white p-5">
-                {block.label ? <div className="mb-3 text-xs uppercase tracking-[0.24em] text-[#5b7285]">{block.label}</div> : null}
-                <BlockPrint block={block} />
+          {options.showHeader && (
+            <div className="mb-4 flex items-center justify-between border-b border-[#dbe9f1] pb-3 text-[10px] text-[#5b7285]">
+              <div className="flex flex-col">
+                {options.showAgencyName && <span className="font-semibold uppercase tracking-widest text-[#2f82ff]">{settings.agencyName}</span>}
+                {options.showClientName && <span>{client.name}</span>}
               </div>
-            ))}
-          </div>
+              {options.showReportTitle && <div className="max-w-[200px] truncate">{report.title}</div>}
+            </div>
+          )}
 
-          <div className="mt-8 flex items-center justify-between text-xs text-[#5b7285]">
-            <span>{settings.agencyName}</span>
-            <span>{client.name}</span>
-            <span>Page {pageIndex + 1}</span>
-          </div>
+          {page.isPdf && page.pdfData ? (
+            <div className="mt-4">
+              <PdfPageViewer pdfData={page.pdfData} />
+            </div>
+          ) : (
+            <>
+              <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>
+              <div className="mt-6 space-y-4">
+                {page.blocks.map((block) => (
+                  <div key={block.id} className="rounded-[28px] border border-[#dbe9f1] bg-white p-5">
+                    {block.label ? <div className="mb-3 text-xs uppercase tracking-[0.24em] text-[#5b7285]">{block.label}</div> : null}
+                    <BlockPrint block={block} />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {options.showFooter && (
+            <div className="mt-8 flex items-center justify-between border-t border-[#dbe9f1] pt-4 text-[10px] text-[#5b7285]">
+              <div>{options.showDate && <span>{new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" })}</span>}</div>
+              <div>{options.showPageNumbers && <span>Page {pageIndex + 1} of {flattenedPages.length}</span>}</div>
+            </div>
+          )}
         </div>
       ))}
     </div>

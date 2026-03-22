@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Copy, GripVertical, MoreHorizontal, Trash2 } from "lucide-react";
+import { Copy, GripVertical, MoreHorizontal, Trash2, Upload } from "lucide-react";
 
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { RichTextRenderer } from "@/components/editor/RichTextRenderer";
@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { addChecklistItem, addKpiItem, createDocumentBlock } from "@/lib/documentTree";
 import { richTextDocToPlainText } from "@/lib/richText";
+import { cn, fileToBase64 } from "@/lib/utils";
 import type { DocumentBlock, DocumentBlockType } from "@/types/imani";
 
 function StatusPill({ tone, children }: { tone: string; children: React.ReactNode }) {
@@ -449,18 +450,41 @@ export function BlockRenderer({
 
       {block.type === "media" && (
         <div className="space-y-3">
-          <Input
-            value={block.props.url}
-            onChange={(event) => onChange({ ...block, props: { ...block.props, url: event.target.value } })}
-            className="h-10 rounded-2xl bg-white"
-            placeholder="Paste image URL"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={block.props.url}
+              onChange={(event) => onChange({ ...block, props: { ...block.props, url: event.target.value } })}
+              className="h-10 rounded-2xl bg-white"
+              placeholder="Paste image URL"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0 rounded-2xl bg-white"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    const base64 = await fileToBase64(file);
+                    onChange({ ...block, props: { ...block.props, url: base64 } });
+                  }
+                };
+                input.click();
+              }}
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+          </div>
           <Input
             value={block.props.caption ?? ""}
             onChange={(event) => onChange({ ...block, props: { ...block.props, caption: event.target.value } })}
             className="h-10 rounded-2xl bg-white"
             placeholder="Caption"
           />
+
           <div className="grid gap-3 md:grid-cols-2">
             <Select
               value={block.props.fit ?? "contain"}

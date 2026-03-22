@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChevronRight, FilePlus2, FolderTree, GripVertical, PanelLeft, Plus } from "lucide-react";
+import { ChevronRight, FilePlus2, FileUp, FolderTree, GripVertical, PanelLeft, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -13,22 +13,30 @@ function PageList({
   selectedPageId,
   onSelect,
   onAddPage,
+  onImportPdf,
   onMove,
 }: {
   pages: DocumentPage[];
   selectedPageId?: string;
   onSelect: (pageId: string) => void;
   onAddPage: (parentId: string | null) => void;
+  onImportPdf: () => void;
   onMove: (pageId: string, direction: "up" | "down") => void;
 }) {
   const flattened = flattenDocumentPages(pages);
 
   return (
     <div className="space-y-2">
-      <Button className="h-11 w-full justify-start rounded-2xl" onClick={() => onAddPage(null)}>
-        <Plus className="mr-2 h-4 w-4" /> New top-level page
-      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Button className="h-11 justify-start rounded-2xl" onClick={() => onAddPage(null)}>
+          <Plus className="mr-2 h-4 w-4" /> New page
+        </Button>
+        <Button variant="outline" className="h-11 justify-start rounded-2xl bg-white" onClick={onImportPdf}>
+          <FileUp className="mr-2 h-4 w-4" /> Import PDF
+        </Button>
+      </div>
       <div className="space-y-1">
+
         {flattened.map((page) => (
           <div key={page.id} className="flex items-center gap-2">
             <button
@@ -85,8 +93,10 @@ export function DocumentSidebarTree(props: {
   selectedPageId?: string;
   onSelect: (pageId: string) => void;
   onAddPage: (parentId: string | null) => void;
+  onImportPdf: () => void;
   onMove: (pageId: string, direction: "up" | "down") => void;
 }) {
+
   const isMobile = useIsMobile();
 
   if (isMobile) {

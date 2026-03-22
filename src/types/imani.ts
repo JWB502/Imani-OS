@@ -7,6 +7,16 @@ export interface User {
   role: UserRole;
 }
 
+export interface PdfExportOptions {
+  showHeader: boolean;
+  showFooter: boolean;
+  showPageNumbers: boolean;
+  showDate: boolean;
+  showAgencyName: boolean;
+  showClientName: boolean;
+  showReportTitle: boolean;
+}
+
 export interface AppSettings {
   agencyName: string;
   openAiApiKey?: string;
@@ -16,6 +26,7 @@ export interface AppSettings {
   redactionStyle: "iaid" | "initial";
   analysts: string[];
   pdfPageNumbers: boolean;
+  pdfExportOptions?: PdfExportOptions;
 }
 
 export type ClientStatus = "Lead" | "Active" | "Paused" | "Former";
@@ -242,6 +253,8 @@ export interface DocumentPage {
   coverUrl?: string;
   order: number;
   blocks: DocumentBlock[];
+  isPdf?: boolean;
+  pdfData?: string; // base64
 }
 
 export interface MigrationMeta {
@@ -274,6 +287,7 @@ export interface DocumentReport extends MigrationMeta {
   nextSteps?: string;
   internalNotes?: string;
   pdfPageNumbers?: boolean;
+  pdfExportOptions?: PdfExportOptions;
   pages: DocumentPage[];
   createdAt: string;
   updatedAt: string;

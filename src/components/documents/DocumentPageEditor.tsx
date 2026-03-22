@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Blocks, CopyPlus, FileStack, Plus } from "lucide-react";
+import { Blocks, CopyPlus, FileStack, FileText, Plus } from "lucide-react";
 
 import { BlockInserter } from "@/components/documents/BlockInserter";
 import { BlockRenderer, convertBlockType } from "@/components/documents/BlockRenderer";
+import { PdfPageViewer } from "@/components/documents/PdfPageViewer";
 import { RichTextRenderer } from "@/components/editor/RichTextRenderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createDocumentBlock, duplicateBlocks, moveItem } from "@/lib/documentTree";
+import { fileToBase64 } from "@/lib/utils";
 import type { DocumentPage, DocumentTemplate } from "@/types/imani";
 
 export function DocumentPageEditor({
@@ -27,6 +29,7 @@ export function DocumentPageEditor({
   onChange: (page: DocumentPage) => void;
   reusableFragments: DocumentTemplate[];
 }) {
+
   const [inserterIndex, setInserterIndex] = React.useState<number | null>(null);
   const [selectedFragmentId, setSelectedFragmentId] = React.useState<string>("");
   const [draggedBlockId, setDraggedBlockId] = React.useState<string | null>(null);
@@ -109,116 +112,151 @@ export function DocumentPageEditor({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 rounded-[28px] border border-border/70 bg-muted/20 p-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="text-sm font-semibold">Flexible block canvas</div>
-          <div className="text-sm text-muted-foreground">
-            Add content between blocks, drag sections into a better order, or drop in a reusable fragment.
+      {page.isPdf && page.pdfData ? (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-[28px] border border-border/70 bg-muted/20 p-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold">PDF Import Preview</div>
+              <div className="text-sm text-muted-foreground">
+                This page contains an imported PDF document. It will be rendered in full in the export.
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="h-11 rounded-2xl"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "application/pdf";
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    const base64 = await fileToBase64(file);
+                    onChange({ ...page, pdfData: base64, title: file.name.replace(".pdf", "") });
+                  }
+                };
+                input.click();
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4" /> Replace PDF
+            </Button>
           </div>
+          <PdfPageViewer pdfData={page.pdfData} />
         </div>
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] lg:w-[440px]">
-          <Select value={selectedFragmentId} onValueChange={setSelectedFragmentId}>
-            <SelectTrigger className="h-11 rounded-2xl bg-white">
-              <SelectValue placeholder="Insert reusable fragment" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              {reusableFragments.map((fragment) => (
-                <SelectItem key={fragment.id} value={fragment.id}>
-                  {fragment.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" className="h-11 rounded-2xl" onClick={insertFragment} disabled={!reusableFragments.length}>
-            <CopyPlus className="mr-2 h-4 w-4" /> Insert fragment
-          </Button>
-        </div>
-      </div>
-
-      {page.blocks.length === 0 ? (
-        <div className="rounded-[28px] border border-dashed border-border/80 bg-muted/20 p-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-            <FileStack className="h-5 w-5" />
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 rounded-[28px] border border-border/70 bg-muted/20 p-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold">Flexible block canvas</div>
+              <div className="text-sm text-muted-foreground">
+                Add content between blocks, drag sections into a better order, or drop in a reusable fragment.
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] lg:w-[440px]">
+              <Select value={selectedFragmentId} onValueChange={setSelectedFragmentId}>
+                <SelectTrigger className="h-11 rounded-2xl bg-white">
+                  <SelectValue placeholder="Insert reusable fragment" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {reusableFragments.map((fragment) => (
+                    <SelectItem key={fragment.id} value={fragment.id}>
+                      {fragment.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="h-11 rounded-2xl" onClick={insertFragment} disabled={!reusableFragments.length}>
+                <CopyPlus className="mr-2 h-4 w-4" /> Insert fragment
+              </Button>
+            </div>
           </div>
-          <div className="text-lg font-semibold">This page is empty</div>
-          <div className="mt-2 text-sm text-muted-foreground">Use the insert control to start writing on the canvas.</div>
-          <div className="mt-4 flex justify-center">
-            <BlockInserter open={inserterIndex === 0} onOpenChange={(open) => setInserterIndex(open ? 0 : null)} onSelect={(type) => insertBlock(0, type)} />
-          </div>
-        </div>
-      ) : null}
 
-      {page.blocks.map((block, index) => (
-        <div
-          key={block.id}
-          draggable
-          onDragStart={() => setDraggedBlockId(block.id)}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={() => {
-            if (!draggedBlockId || draggedBlockId === block.id) return;
-            const from = page.blocks.findIndex((entry) => entry.id === draggedBlockId);
-            const to = page.blocks.findIndex((entry) => entry.id === block.id);
-            if (from < 0 || to < 0) return;
-            updateBlocks(moveItem(page.blocks, from, to));
-            setDraggedBlockId(null);
-          }}
-          className="space-y-3"
-        >
-          <BlockInserter
-            open={inserterIndex === index}
-            onOpenChange={(open) => setInserterIndex(open ? index : null)}
-            onSelect={(type) => insertBlock(index, type)}
-          />
+          {page.blocks.length === 0 ? (
+            <div className="rounded-[28px] border border-dashed border-border/80 bg-muted/20 p-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                <FileStack className="h-5 w-5" />
+              </div>
+              <div className="text-lg font-semibold">This page is empty</div>
+              <div className="mt-2 text-sm text-muted-foreground">Use the insert control to start writing on the canvas.</div>
+              <div className="mt-4 flex justify-center">
+                <BlockInserter open={inserterIndex === 0} onOpenChange={(open) => setInserterIndex(open ? 0 : null)} onSelect={(type) => insertBlock(0, type)} />
+              </div>
+            </div>
+          ) : null}
 
-          <BlockRenderer
-            block={block}
-            index={index}
-            total={page.blocks.length}
-            onChange={(next) => updateBlocks(page.blocks.map((entry) => (entry.id === block.id ? next : entry)))}
-            onDelete={() => updateBlocks(page.blocks.filter((entry) => entry.id !== block.id))}
-            onDuplicate={() => updateBlocks([
-              ...page.blocks.slice(0, index + 1),
-              ...duplicateBlocks([block]),
-              ...page.blocks.slice(index + 1),
-            ])}
-            onMove={(direction) => {
-              const to = direction === "up" ? Math.max(0, index - 1) : Math.min(page.blocks.length - 1, index + 1);
-              updateBlocks(moveItem(page.blocks, index, to));
-            }}
-            onConvert={(type) => updateBlocks(page.blocks.map((entry) => (entry.id === block.id ? convertBlockType(block, type) : entry)))}
-          />
-        </div>
-      ))}
+          {page.blocks.map((block, index) => (
+            <div
+              key={block.id}
+              draggable
+              onDragStart={() => setDraggedBlockId(block.id)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                if (!draggedBlockId || draggedBlockId === block.id) return;
+                const from = page.blocks.findIndex((entry) => entry.id === draggedBlockId);
+                const to = page.blocks.findIndex((entry) => entry.id === block.id);
+                if (from < 0 || to < 0) return;
+                updateBlocks(moveItem(page.blocks, from, to));
+                setDraggedBlockId(null);
+              }}
+              className="space-y-3"
+            >
+              <BlockInserter
+                open={inserterIndex === index}
+                onOpenChange={(open) => setInserterIndex(open ? index : null)}
+                onSelect={(type) => insertBlock(index, type)}
+              />
 
-      {page.blocks.length > 0 ? (
-        <BlockInserter
-          open={inserterIndex === page.blocks.length}
-          onOpenChange={(open) => setInserterIndex(open ? page.blocks.length : null)}
-          onSelect={(type) => insertBlock(page.blocks.length, type)}
-        />
-      ) : null}
-
-      <div className="rounded-[28px] border border-border/70 bg-muted/20 p-4">
-        <div className="mb-2 text-sm font-semibold">Print readability snapshot</div>
-        <div className="mb-4 text-sm text-muted-foreground">
-          Export flattens the page tree in reading order, so every page should read clearly on its own.
-        </div>
-        <div className="rounded-[24px] border border-border/70 bg-white p-4">
-          <div className="mb-2 text-xs uppercase tracking-[0.24em] text-muted-foreground">Preview excerpt</div>
-          <div className="text-xl font-semibold tracking-tight">{page.title || "Untitled page"}</div>
-          {page.blocks.slice(0, 2).map((block) => (
-            <div key={block.id} className="mt-3">
-              {block.type === "paragraph" || block.type === "heading" ? (
-                <RichTextRenderer doc={block.props.content} />
-              ) : (
-                <div className="rounded-2xl bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                  {block.label || block.type}
-                </div>
-              )}
+              <BlockRenderer
+                block={block}
+                index={index}
+                total={page.blocks.length}
+                onChange={(next) => updateBlocks(page.blocks.map((entry) => (entry.id === block.id ? next : entry)))}
+                onDelete={() => updateBlocks(page.blocks.filter((entry) => entry.id !== block.id))}
+                onDuplicate={() => updateBlocks([
+                  ...page.blocks.slice(0, index + 1),
+                  ...duplicateBlocks([block]),
+                  ...page.blocks.slice(index + 1),
+                ])}
+                onMove={(direction) => {
+                  const to = direction === "up" ? Math.max(0, index - 1) : Math.min(page.blocks.length - 1, index + 1);
+                  updateBlocks(moveItem(page.blocks, index, to));
+                }}
+                onConvert={(type) => updateBlocks(page.blocks.map((entry) => (entry.id === block.id ? convertBlockType(block, type) : entry)))}
+              />
             </div>
           ))}
-        </div>
-      </div>
+
+          {page.blocks.length > 0 ? (
+            <BlockInserter
+              open={inserterIndex === page.blocks.length}
+              onOpenChange={(open) => setInserterIndex(open ? page.blocks.length : null)}
+              onSelect={(type) => insertBlock(page.blocks.length, type)}
+            />
+          ) : null}
+
+          <div className="rounded-[28px] border border-border/70 bg-muted/20 p-4">
+            <div className="mb-2 text-sm font-semibold">Print readability snapshot</div>
+            <div className="mb-4 text-sm text-muted-foreground">
+              Export flattens the page tree in reading order, so every page should read clearly on its own.
+            </div>
+            <div className="rounded-[24px] border border-border/70 bg-white p-4">
+              <div className="mb-2 text-xs uppercase tracking-[0.24em] text-muted-foreground">Preview excerpt</div>
+              <div className="text-xl font-semibold tracking-tight">{page.title || "Untitled page"}</div>
+              {page.blocks.slice(0, 2).map((block) => (
+                <div key={block.id} className="mt-3">
+                  {block.type === "paragraph" || block.type === "heading" ? (
+                    <RichTextRenderer doc={block.props.content} />
+                  ) : (
+                    <div className="rounded-2xl bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                      {block.label || block.type}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

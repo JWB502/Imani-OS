@@ -3,6 +3,7 @@ import * as React from "react";
 import { DocumentPageEditor } from "@/components/documents/DocumentPageEditor";
 import { DocumentSidebarTree } from "@/components/documents/DocumentSidebarTree";
 import { createDocumentPage, flattenDocumentPages, getChildPages, moveItem, normalizePageOrders } from "@/lib/documentTree";
+import { fileToBase64 } from "@/lib/utils";
 import type { DocumentPage, DocumentTemplate } from "@/types/imani";
 
 export function DocumentWorkspace({
@@ -36,6 +37,30 @@ export function DocumentWorkspace({
     setSelectedPageId(nextPage.id);
   }
 
+  async function importPdf() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const base64 = await fileToBase64(file);
+        const parentId = null;
+        const siblings = getChildPages(pages, parentId);
+        const nextPage: DocumentPage = {
+          ...createDocumentPage(file.name.replace(".pdf", ""), parentId, siblings.length),
+          blocks: [], // PDF pages don't need blocks
+          isPdf: true,
+          pdfData: base64,
+        };
+        const nextPages = normalizePageOrders([...pages, nextPage]);
+        onChangePages(nextPages);
+        setSelectedPageId(nextPage.id);
+      }
+    };
+    input.click();
+  }
+
   function movePage(pageId: string, direction: "up" | "down") {
     const page = pages.find((item) => item.id === pageId);
     if (!page) return;
@@ -64,6 +89,7 @@ export function DocumentWorkspace({
             selectedPageId={selectedPage?.id}
             onSelect={setSelectedPageId}
             onAddPage={addPage}
+            onImportPdf={importPdf}
             onMove={movePage}
           />
         </div>
