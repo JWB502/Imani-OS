@@ -58,11 +58,11 @@ function ToolButton({
   return (
     <Button
       type="button"
-      variant="secondary"
+      variant="ghost"
       size="icon"
       className={cn(
-        "h-9 w-9 rounded-xl bg-white shadow-sm ring-1 ring-border/80 hover:bg-slate-50 hover:ring-border transition-all duration-200",
-        active && "bg-primary text-primary-foreground ring-primary hover:bg-primary/90 hover:ring-primary",
+        "h-9 w-9 rounded-xl bg-white shadow-sm ring-1 ring-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 hover:ring-slate-400 transition-all duration-200",
+        active && "bg-primary text-primary-foreground ring-primary hover:bg-primary/90 hover:ring-primary hover:text-primary-foreground",
       )}
       disabled={disabled}
       onClick={onClick}
@@ -99,7 +99,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-[120px] w-full rounded-2xl bg-white px-4 py-3 text-sm leading-6 ring-1 ring-border/60 focus:outline-none shadow-inner" +
+          "min-h-[120px] w-full rounded-2xl bg-white px-4 py-3 text-sm leading-6 ring-1 ring-slate-200 focus:outline-none shadow-inner" +
           " " +
           "[&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight" +
           " " +
@@ -131,19 +131,19 @@ export function RichTextEditor({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-[22px] border border-border/60 bg-slate-100/50 p-1.5 shadow-sm">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-[22px] border border-slate-300 bg-slate-50 p-1.5 shadow-sm">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              variant="secondary"
-              className="h-9 rounded-xl border-none bg-white px-3 text-xs font-semibold shadow-sm ring-1 ring-border/80 hover:bg-slate-50 hover:ring-border"
+              variant="ghost"
+              className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-300 hover:bg-slate-100 hover:ring-slate-400"
             >
-              Headings <ChevronDown className="ml-1.5 h-3 w-3 opacity-50" />
+              Headings <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="rounded-xl border-border/60 shadow-lg">
+          <DropdownMenuContent align="start" className="rounded-xl border-slate-300 shadow-lg">
             <DropdownMenuItem
               className="rounded-lg"
               onClick={() => editor?.chain().focus().setParagraph().run()}
@@ -172,7 +172,7 @@ export function RichTextEditor({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="mx-1 h-6 w-px bg-border/40" />
+        <div className="mx-1 h-6 w-px bg-slate-300" />
 
         <ToolButton
           ariaLabel="Bold"
@@ -199,7 +199,7 @@ export function RichTextEditor({
           <UnderlineIcon className="h-4 w-4" />
         </ToolButton>
 
-        <div className="mx-1 h-6 w-px bg-border/40" />
+        <div className="mx-1 h-6 w-px bg-slate-300" />
 
         <ToolButton
           ariaLabel="Bulleted list"
@@ -218,19 +218,19 @@ export function RichTextEditor({
           <ListOrdered className="h-4 w-4" />
         </ToolButton>
 
-        <div className="mx-1 h-6 w-px bg-border/40" />
+        <div className="mx-1 h-6 w-px bg-slate-300" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              variant="secondary"
-              className="h-9 rounded-xl border-none bg-white px-3 text-xs font-semibold shadow-sm ring-1 ring-border/80 hover:bg-slate-50 hover:ring-border"
+              variant="ghost"
+              className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-300 hover:bg-slate-100 hover:ring-slate-400"
             >
-              Text color <ChevronDown className="ml-1.5 h-3 w-3 opacity-50" />
+              Text color <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="rounded-xl border-border/60 shadow-lg">
+          <DropdownMenuContent align="start" className="rounded-xl border-slate-300 shadow-lg">
             {COLORS.map((c) => (
               <DropdownMenuItem
                 key={c.name}
@@ -243,7 +243,7 @@ export function RichTextEditor({
                 }}
               >
                 <span
-                  className="mr-2 inline-block h-3.5 w-3.5 rounded-full ring-1 ring-border shadow-sm"
+                  className="mr-2 inline-block h-3.5 w-3.5 rounded-full ring-1 ring-slate-300 shadow-sm"
                   style={{ backgroundColor: c.value ?? "transparent" }}
                 />
                 {c.name}
@@ -256,8 +256,8 @@ export function RichTextEditor({
 
         <Button
           type="button"
-          variant="secondary"
-          className="h-9 rounded-xl border-none bg-white px-3 text-xs font-semibold text-destructive shadow-sm ring-1 ring-border/80 hover:bg-destructive/5 hover:ring-destructive/30"
+          variant="ghost"
+          className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-destructive shadow-sm ring-1 ring-slate-300 hover:bg-destructive/10 hover:ring-destructive/40 hover:text-destructive"
           onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
           disabled={!editor}
         >
@@ -267,7 +267,7 @@ export function RichTextEditor({
 
       <div className="relative">
         {!editor?.getText().trim() && placeholder ? (
-          <div className="pointer-events-none absolute left-4 top-3 text-sm text-muted-foreground/60">
+          <div className="pointer-events-none absolute left-4 top-3 text-sm text-slate-400">
             {placeholder}
           </div>
         ) : null}
