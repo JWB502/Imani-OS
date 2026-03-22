@@ -37,6 +37,28 @@ export function DocumentWorkspace({
     setSelectedPageId(nextPage.id);
   }
 
+  function deletePage(pageId: string) {
+    const pageToDelete = pages.find((p) => p.id === pageId);
+    if (!pageToDelete) return;
+    
+    if (!confirm(`Delete page "${pageToDelete.title}" and all its subpages?`)) return;
+
+    const toDelete = new Set([pageId]);
+    let size = 0;
+    // Recursively collect all descendant IDs
+    while (toDelete.size > size) {
+      size = toDelete.size;
+      pages.forEach((p) => {
+        if (p.parentId && toDelete.has(p.parentId)) {
+          toDelete.add(p.id);
+        }
+      });
+    }
+
+    const nextPages = pages.filter((p) => !toDelete.has(p.id));
+    onChangePages(normalizePageOrders(nextPages));
+  }
+
   async function importPdf() {
     const input = document.createElement("input");
     input.type = "file";
@@ -89,6 +111,7 @@ export function DocumentWorkspace({
             selectedPageId={selectedPage?.id}
             onSelect={setSelectedPageId}
             onAddPage={addPage}
+            onDeletePage={deletePage}
             onImportPdf={importPdf}
             onMove={movePage}
           />
