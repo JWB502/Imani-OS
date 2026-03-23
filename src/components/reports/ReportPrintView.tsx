@@ -17,7 +17,6 @@ const DEFAULT_PDF_OPTIONS: PdfExportOptions = {
 };
 
 function ProgressBar({ value, max = 100 }: { value: number; max?: number }) {
-
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#dbe9f1]">
@@ -252,6 +251,11 @@ export function ReportPrintView({
             </div>
           ) : (
             <>
+              {page.coverUrl && (
+                <div className="mb-6 h-48 w-full overflow-hidden rounded-2xl border border-[#dbe9f1]">
+                  <img src={page.coverUrl} alt="" className="h-full w-full object-cover" />
+                </div>
+              )}
               <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>
               <div className="mt-6 space-y-4">
                 {page.blocks.map((block) => (
