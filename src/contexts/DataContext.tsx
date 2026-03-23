@@ -9,6 +9,7 @@ import { DATA_KEY_V1, DATA_KEY_V2, migrateAppData } from "@/lib/documentMigratio
 import { duplicateDocumentPages } from "@/lib/documentTree";
 import type {
   AgencyExpense,
+  AgencyHq,
   AgencyProduct,
   DocumentReport,
   DocumentTemplate,
@@ -58,6 +59,22 @@ export const DataContext = createContext<DataContextType | undefined>(undefined)
 function nowIso() {
   return new Date().toISOString();
 }
+
+const defaultAgencyHq: AgencyHq = {
+  overview: {
+    name: "",
+    description: "",
+    location: { city: "", state: "", country: "" },
+    websiteUrl: "",
+    foundingDate: "",
+    employeeCount: 0,
+    annualMarketingBudget: 0,
+  },
+  annualProfitGoal: 0,
+  products: [],
+  expenses: [],
+  keyPersonnel: [],
+};
 
 function loadInitialData(): ImaniData {
   const latest = readJson<any>(DATA_KEY_V2);
@@ -345,56 +362,83 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       reports: prev.reports.filter((report) => report.id !== id),
     })),
-    updateAgencyOverview: (patch: any) => setData((prev) => ({
-      ...prev,
-      agencyHq: { ...prev.agencyHq!, overview: { ...prev.agencyHq!.overview, ...patch } },
-    })),
-    updateAgencyAnnualProfitGoal: (goal: number) => setData((prev) => ({
-      ...prev,
-      agencyHq: { ...prev.agencyHq!, annualProfitGoal: goal },
-    })),
-    upsertAgencyProduct: (product: AgencyProduct) => setData((prev) => ({
-      ...prev,
-      agencyHq: {
-        ...prev.agencyHq!,
-        products: product.id
-          ? prev.agencyHq!.products.map((item) => (item.id === product.id ? product : item))
-          : [...prev.agencyHq!.products, { ...product, id: createId("ap") }],
-      },
-    })),
-    deleteAgencyProduct: (id: string) => setData((prev) => ({
-      ...prev,
-      agencyHq: { ...prev.agencyHq!, products: prev.agencyHq!.products.filter((item) => item.id !== id) },
-    })),
-    upsertAgencyExpense: (expense: AgencyExpense) => setData((prev) => ({
-      ...prev,
-      agencyHq: {
-        ...prev.agencyHq!,
-        expenses: expense.id
-          ? prev.agencyHq!.expenses.map((item) => (item.id === expense.id ? expense : item))
-          : [...prev.agencyHq!.expenses, { ...expense, id: createId("ae") }],
-      },
-    })),
-    deleteAgencyExpense: (id: string) => setData((prev) => ({
-      ...prev,
-      agencyHq: { ...prev.agencyHq!, expenses: prev.agencyHq!.expenses.filter((item) => item.id !== id) },
-    })),
-    upsertKeyPerson: (person: KeyPerson) => setData((prev) => ({
-      ...prev,
-      agencyHq: {
-        ...prev.agencyHq!,
-        keyPersonnel: person.id
-          ? (prev.agencyHq!.keyPersonnel || []).map(p => p.id === person.id ? person : p)
-          : [...(prev.agencyHq!.keyPersonnel || []), { ...person, id: createId("kp") }]
-      }
-    })),
-    deleteKeyPerson: (id: string) => setData((prev) => ({
-      ...prev,
-      agencyHq: {
-        ...prev.agencyHq!,
-        keyPersonnel: (prev.agencyHq!.keyPersonnel || []).filter(p => p.id !== id)
-      }
-    })),
+    updateAgencyOverview: (patch: any) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: { 
+          ...currentHq, 
+          overview: { ...currentHq.overview, ...patch } 
+        },
+      };
+    }),
+    updateAgencyAnnualProfitGoal: (goal: number) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: { ...currentHq, annualProfitGoal: goal },
+      };
+    }),
+    upsertAgencyProduct: (product: AgencyProduct) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: {
+          ...currentHq,
+          products: product.id
+            ? currentHq.products.map((item) => (item.id === product.id ? product : item))
+            : [...currentHq.products, { ...product, id: createId("ap") }],
+        },
+      };
+    }),
+    deleteAgencyProduct: (id: string) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: { ...currentHq, products: currentHq.products.filter((item) => item.id !== id) },
+      };
+    }),
+    upsertAgencyExpense: (expense: AgencyExpense) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: {
+          ...currentHq,
+          expenses: expense.id
+            ? currentHq.expenses.map((item) => (item.id === expense.id ? expense : item))
+            : [...currentHq.expenses, { ...expense, id: createId("ae") }],
+        },
+      };
+    }),
+    deleteAgencyExpense: (id: string) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: { ...currentHq, expenses: currentHq.expenses.filter((item) => item.id !== id) },
+      };
+    }),
+    upsertKeyPerson: (person: KeyPerson) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: {
+          ...currentHq,
+          keyPersonnel: person.id
+            ? (currentHq.keyPersonnel || []).map(p => p.id === person.id ? person : p)
+            : [...(currentHq.keyPersonnel || []), { ...person, id: createId("kp") }]
+        }
+      };
+    }),
+    deleteKeyPerson: (id: string) => setData((prev) => {
+      const currentHq = prev.agencyHq || defaultAgencyHq;
+      return {
+        ...prev,
+        agencyHq: {
+          ...currentHq,
+          keyPersonnel: (currentHq.keyPersonnel || []).filter(p => p.id !== id)
+        }
+      };
+    }),
     resetToSeed,
   }), [
     bulkUpsertMonthlyMetrics,
