@@ -13,6 +13,8 @@ export function replaceDocumentPlaceholders(text: string, report: Report, client
   output = replaceToken(output, "{{Report Period}}", report.reportingPeriod ?? "");
   output = replaceToken(output, "{{Date}}", new Date().toLocaleDateString());
   output = replaceToken(output, "{{Analyst Name}}", report.analyst ?? "");
+  output = replaceToken(output, "{{City}}", client.city ?? "");
+  output = replaceToken(output, "{{State}}", client.state ?? "");
   return output;
 }
 
