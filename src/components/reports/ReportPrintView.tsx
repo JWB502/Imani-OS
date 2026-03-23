@@ -253,7 +253,12 @@ export function ReportPrintView({
             <>
               {page.coverUrl && (
                 <div className="mb-6 h-48 w-full overflow-hidden rounded-2xl border border-[#dbe9f1]">
-                  <img src={page.coverUrl} alt="" className="h-full w-full object-cover" />
+                  <img 
+                    src={page.coverUrl} 
+                    alt="" 
+                    className="h-full w-full object-cover" 
+                    style={{ objectPosition: page.coverImagePosition || 'center' }}
+                  />
                 </div>
               )}
               <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>

@@ -20,6 +20,18 @@ import { createDocumentBlock, duplicateBlocks, moveItem } from "@/lib/documentTr
 import { fileToBase64 } from "@/lib/utils";
 import type { DocumentPage, DocumentTemplate } from "@/types/imani";
 
+const FOCAL_POINTS = [
+  { label: "Center", value: "center" },
+  { label: "Top", value: "top" },
+  { label: "Bottom", value: "bottom" },
+  { label: "Left", value: "left" },
+  { label: "Right", value: "right" },
+  { label: "Top Left", value: "top left" },
+  { label: "Top Right", value: "top right" },
+  { label: "Bottom Left", value: "bottom left" },
+  { label: "Bottom Right", value: "bottom right" },
+];
+
 export function DocumentPageEditor({
   page,
   onChange,
@@ -98,17 +110,42 @@ export function DocumentPageEditor({
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Cover image URL</Label>
-          <Input
-            value={page.coverUrl ?? ""}
-            onChange={(event) => onChange({ ...page, coverUrl: event.target.value })}
-            className="h-12 rounded-2xl bg-white"
-            placeholder="Optional cover image URL"
-          />
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+          <div className="space-y-2">
+            <Label>Cover image URL</Label>
+            <Input
+              value={page.coverUrl ?? ""}
+              onChange={(event) => onChange({ ...page, coverUrl: event.target.value })}
+              className="h-12 rounded-2xl bg-white"
+              placeholder="Optional cover image URL"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Focal Point</Label>
+            <Select
+              value={page.coverImagePosition || "center"}
+              onValueChange={(val) => onChange({ ...page, coverImagePosition: val })}
+            >
+              <SelectTrigger className="h-12 rounded-2xl bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl shadow-xl">
+                {FOCAL_POINTS.map((fp) => (
+                  <SelectItem key={fp.value} value={fp.value} className="rounded-lg">
+                    {fp.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {page.coverUrl ? (
-          <img src={page.coverUrl} alt={page.title} className="h-44 w-full rounded-[24px] object-cover" />
+          <img 
+            src={page.coverUrl} 
+            alt={page.title} 
+            className="h-44 w-full rounded-[24px] object-cover" 
+            style={{ objectPosition: page.coverImagePosition || 'center' }}
+          />
         ) : null}
       </div>
 

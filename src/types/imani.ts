@@ -251,6 +251,7 @@ export interface DocumentPage {
   title: string;
   icon?: string;
   coverUrl?: string;
+  coverImagePosition?: string;
   order: number;
   blocks: DocumentBlock[];
   isPdf?: boolean;
