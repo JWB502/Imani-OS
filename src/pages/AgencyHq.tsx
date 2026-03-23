@@ -265,24 +265,24 @@ export default function AgencyHq() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-white/50 p-1 rounded-2xl shadow-sm border border-border/50 overflow-x-auto flex w-full md:w-auto">
-          <TabsTrigger value="overview" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
+        <TabsList className="bg-white/50 p-1 rounded-2xl shadow-sm border border-border/50 flex flex-wrap w-full md:w-auto h-auto gap-1">
+          <TabsTrigger value="overview" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap flex-1 md:flex-initial md:min-w-[140px] md:max-w-[calc(20%-4px)]">
             <Building2 className="h-4 w-4" />
             Agency Overview
           </TabsTrigger>
-          <TabsTrigger value="products" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
+          <TabsTrigger value="products" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap flex-1 md:flex-initial md:min-w-[140px] md:max-w-[calc(20%-4px)]">
             <Package className="h-4 w-4" />
             Products/Services
           </TabsTrigger>
-          <TabsTrigger value="expenses" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
+          <TabsTrigger value="expenses" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap flex-1 md:flex-initial md:min-w-[140px] md:max-w-[calc(20%-4px)]">
             <DollarSign className="h-4 w-4" />
             Recurring Expenses
           </TabsTrigger>
-          <TabsTrigger value="revenue" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
+          <TabsTrigger value="revenue" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap flex-1 md:flex-initial md:min-w-[140px] md:max-w-[calc(20%-4px)]">
             <Calculator className="h-4 w-4" />
             Recurring Revenue
           </TabsTrigger>
-          <TabsTrigger value="goal" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap">
+          <TabsTrigger value="goal" className="rounded-xl px-4 py-2 gap-2 whitespace-nowrap flex-1 md:flex-initial md:min-w-[140px] md:max-w-[calc(20%-4px)]">
             <Target className="h-4 w-4" />
             Goal & Projection
           </TabsTrigger>
@@ -513,7 +513,7 @@ export default function AgencyHq() {
                     </div>
                     <div className="flex justify-between items-center text-sm border-t pt-4">
                       <span className="text-muted-foreground">App Version</span>
-                      <Badge variant="outline" className="rounded-lg">v1.3.1</Badge>
+                      <Badge variant="outline" className="rounded-lg">v1.4.2</Badge>
                     </div>
                   </CardContent>
                 </Card>
