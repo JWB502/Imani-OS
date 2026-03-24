@@ -16,9 +16,18 @@ export function PdfPageViewer({ pdfData, className }: PdfPageViewerProps) {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // If the data is already a rendered image (from our new 1-page-at-a-time logic)
+    // we bypass the PDF.js renderer and display it directly.
+    if (pdfData.startsWith("data:image/")) {
+      setPages([pdfData]);
+      setLoading(false);
+      return;
+    }
+
     let active = true;
 
     async function loadPdf() {
+
       try {
         setLoading(true);
         setError(null);

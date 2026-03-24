@@ -4,6 +4,7 @@ import { DocumentPageEditor } from "@/components/documents/DocumentPageEditor";
 import { DocumentSidebarTree } from "@/components/documents/DocumentSidebarTree";
 import { createDocumentPage, flattenDocumentPages, getChildPages, moveItem, normalizePageOrders } from "@/lib/documentTree";
 import { fileToBase64 } from "@/lib/utils";
+import { renderPdfToImages } from "@/lib/pdf";
 import type { DocumentPage, DocumentTemplate } from "@/types/imani";
 
 export function DocumentWorkspace({
@@ -66,18 +67,27 @@ export function DocumentWorkspace({
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const base64 = await fileToBase64(file);
-        const parentId = null;
-        const siblings = getChildPages(pages, parentId);
-        const nextPage: DocumentPage = {
-          ...createDocumentPage(file.name.replace(".pdf", ""), parentId, siblings.length),
-          blocks: [], // PDF pages don't need blocks
+        // High fidelity page-by-page import
+        const renderedPages = await renderPdfToImages(file);
+        const baseName = file.name.replace(".pdf", "");
+        
+        // Every PDF page becomes its own sidebar item for better reordering and grouping.
+        const newPages: DocumentPage[] = renderedPages.map((page, index) => ({
+          ...createDocumentPage(
+            `${baseName} - Page ${page.pageNumber}`,
+            null,
+            index + pages.length
+          ),
+          blocks: [], // Pure PDF pages don't need blocks
           isPdf: true,
-          pdfData: base64,
-        };
-        const nextPages = normalizePageOrders([...pages, nextPage]);
+          pdfData: page.dataUrl, // Each page holds its specific high-res JPEG image
+        }));
+
+        const nextPages = normalizePageOrders([...pages, ...newPages]);
         onChangePages(nextPages);
-        setSelectedPageId(nextPage.id);
+        
+        // Select the first imported page automatically
+        if (newPages[0]) setSelectedPageId(newPages[0].id);
       }
     };
     input.click();
