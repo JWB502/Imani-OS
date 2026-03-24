@@ -70,18 +70,20 @@ export default function ReportBuilder() {
 
   async function exportPdf() {
     const host = printHostRef.current;
-    const element = host?.querySelector("[data-print-root='true']") as HTMLElement | null;
-    if (!element) return;
+    // We target each physical page element for 1:1 fidelity and multi-page support
+    const pageElements = Array.from(host?.querySelectorAll(".pdf-page-wrapper") || []) as HTMLElement[];
+    
+    if (pageElements.length === 0) {
+      toast({ title: "No pages found to export.", variant: "destructive" });
+      return;
+    }
 
-    const options = report.pdfExportOptions ?? DEFAULT_PDF_OPTIONS;
-
-    toast({ title: "Generating PDF…" });
+    toast({ title: "Optimizing & Generating PDF…" });
     await exportElementToPdf({
-      element,
+      elements: pageElements,
       fileName: `${client.name} — ${report.title}.pdf`,
-      // We disable the jspdf-native page numbering if our DOM-based footer is enabled
-      pageNumbers: options.showFooter ? false : (report.pdfPageNumbers ?? settings.pdfPageNumbers),
     });
+    toast({ title: "PDF export complete." });
   }
 
   return (

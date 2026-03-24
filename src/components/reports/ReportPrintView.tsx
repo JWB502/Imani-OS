@@ -186,20 +186,24 @@ export function ReportPrintView({
     blocks: page.blocks.map((block) => replaceDocumentBlockPlaceholders(block, report, client)),
   }));
 
+  // We add a class for PDF selection and ensure fixed height for 1:1 preview.
+  const pageClass = "pdf-page-wrapper w-[816px] h-[1056px] bg-white p-[54px] shadow-2xl mx-auto mb-10 overflow-hidden relative flex flex-col";
+
   return (
-    <div className="w-[816px] bg-white text-[#0c2136]">
-      <div className="min-h-[1056px] break-after-page p-12">
+    <div className="bg-[#f0f4f8] py-12">
+      {/* Cover/Summary Page */}
+      <div className={pageClass}>
         <div className="flex items-start justify-between gap-6">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.24em] text-[#2f82ff]">{settings.agencyName}</div>
-            <div className="mt-3 text-4xl font-semibold tracking-tight">{report.title}</div>
+            <div className="mt-3 text-4xl font-semibold tracking-tight leading-[1.15]">{report.title}</div>
             <div className="mt-3 text-sm text-[#5b7285]">
               {client.name}
               {report.reportingPeriod ? ` • ${report.reportingPeriod}` : ""}
               {report.analyst ? ` • ${report.analyst}` : ""}
             </div>
           </div>
-          <div className="rounded-[28px] bg-[#2f82ff] px-5 py-4 text-sm font-semibold text-white">{report.status}</div>
+          <div className="rounded-[28px] bg-[#2f82ff] px-5 py-4 text-sm font-semibold text-white shrink-0">{report.status}</div>
         </div>
 
         <div className="mt-10 grid grid-cols-2 gap-5">
@@ -221,22 +225,23 @@ export function ReportPrintView({
         {report.executiveSummary ? (
           <div className="mt-10 rounded-[28px] border border-[#dbe9f1] bg-white p-6">
             <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Executive summary</div>
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{report.executiveSummary}</div>
+            <div className="mt-3 whitespace-pre-wrap text-[13px] leading-6 line-clamp-[12]">{report.executiveSummary}</div>
           </div>
         ) : null}
 
         {report.nextSteps ? (
           <div className="mt-6 rounded-[28px] border border-[#dbe9f1] bg-white p-6">
             <div className="text-xs uppercase tracking-[0.24em] text-[#5b7285]">Next steps</div>
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{report.nextSteps}</div>
+            <div className="mt-3 whitespace-pre-wrap text-[13px] leading-6 line-clamp-6">{report.nextSteps}</div>
           </div>
         ) : null}
       </div>
 
+      {/* Dynamic Content Pages */}
       {flattenedPages.map((page, pageIndex) => (
-        <div key={page.id} className="min-h-[1056px] break-after-page p-12">
+        <div key={page.id} className={pageClass}>
           {options.showHeader && (
-            <div className="mb-4 flex items-center justify-between border-b border-[#dbe9f1] pb-3 text-[10px] text-[#5b7285]">
+            <div className="mb-4 flex items-center justify-between border-b border-[#dbe9f1] pb-3 text-[10px] text-[#5b7285] h-8 shrink-0">
               <div className="flex flex-col">
                 {options.showAgencyName && <span className="font-semibold uppercase tracking-widest text-[#2f82ff]">{settings.agencyName}</span>}
                 {options.showClientName && <span>{client.name}</span>}
@@ -245,36 +250,38 @@ export function ReportPrintView({
             </div>
           )}
 
-          {page.isPdf && page.pdfData ? (
-            <div className="mt-4">
-              <PdfPageViewer pdfData={page.pdfData} />
-            </div>
-          ) : (
-            <>
-              {page.coverUrl && (
-                <div className="mb-6 h-48 w-full overflow-hidden rounded-2xl border border-[#dbe9f1]">
-                  <img 
-                    src={page.coverUrl} 
-                    alt="" 
-                    className="h-full w-full object-cover" 
-                    style={{ objectPosition: page.coverImagePosition || 'center' }}
-                  />
-                </div>
-              )}
-              <div className="mt-2 text-3xl font-semibold tracking-tight">{page.title}</div>
-              <div className="mt-6 space-y-4">
-                {page.blocks.map((block) => (
-                  <div key={block.id} className="rounded-[28px] border border-[#dbe9f1] bg-white p-5">
-                    {block.label ? <div className="mb-3 text-xs uppercase tracking-[0.24em] text-[#5b7285]">{block.label}</div> : null}
-                    <BlockPrint block={block} />
-                  </div>
-                ))}
+          <div className="flex-1 overflow-hidden relative">
+            {page.isPdf && page.pdfData ? (
+              <div className="h-full">
+                <PdfPageViewer pdfData={page.pdfData} />
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                {page.coverUrl && (
+                  <div className="mb-6 h-40 w-full overflow-hidden rounded-2xl border border-[#dbe9f1] shrink-0">
+                    <img 
+                      src={page.coverUrl} 
+                      alt="" 
+                      className="h-full w-full object-cover" 
+                      style={{ objectPosition: page.coverImagePosition || 'center' }}
+                    />
+                  </div>
+                )}
+                <div className="text-2xl font-semibold tracking-tight shrink-0">{page.title}</div>
+                <div className="mt-6 space-y-5">
+                  {page.blocks.map((block) => (
+                    <div key={block.id} className="break-inside-avoid rounded-[28px] border border-[#dbe9f1] bg-white p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
+                      {block.label ? <div className="mb-3 text-[10px] uppercase tracking-[0.24em] font-black text-[#5b7285]">{block.label}</div> : null}
+                      <BlockPrint block={block} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {options.showFooter && (
-            <div className="mt-8 flex items-center justify-between border-t border-[#dbe9f1] pt-4 text-[10px] text-[#5b7285]">
+            <div className="mt-8 flex items-center justify-between border-t border-[#dbe9f1] pt-4 text-[10px] text-[#5b7285] h-8 shrink-0">
               <div>{options.showDate && <span>{new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" })}</span>}</div>
               <div>{options.showPageNumbers && <span>Page {pageIndex + 1} of {flattenedPages.length}</span>}</div>
             </div>
