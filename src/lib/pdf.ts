@@ -2,9 +2,11 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import * as pdfjs from "pdfjs-dist";
 
-// Set worker source once for the library
-// Using a stable CDN version matching the installed version
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// @ts-ignore - Vite will resolve this as a URL
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+
+// Set worker source using the local package via Vite's URL asset mechanism
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface RenderedPdfPage {
   dataUrl: string;

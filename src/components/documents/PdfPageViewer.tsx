@@ -2,8 +2,11 @@ import * as React from "react";
 import * as pdfjs from "pdfjs-dist";
 import { Loader2 } from "lucide-react";
 
-// Set worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// @ts-ignore - Vite will resolve this as a URL
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+
+// Set worker source using the local package via Vite's URL asset mechanism
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PdfPageViewerProps {
   pdfData: string; // base64
