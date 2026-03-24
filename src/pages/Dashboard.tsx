@@ -5,6 +5,7 @@ import { useData } from "@/contexts/DataContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
+import StrategicPulse from "@/components/dashboard/StrategicPulse";
 
 export default function Dashboard() {
   const { data } = useData();
@@ -33,7 +34,10 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Welcome back. Here is what is happening across your agency.</p>
       </div>
 
+      <StrategicPulse />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
         {stats.map((stat) => (
           <Card key={stat.label} className="rounded-3xl border-border/50 shadow-sm overflow-hidden group hover:shadow-md transition-all">
             <CardContent className="p-6">
